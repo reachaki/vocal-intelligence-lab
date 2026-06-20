@@ -9,10 +9,11 @@ The goal is to produce structured vocal context that can help a conversational s
 ## Goals
 
 - Analyse audio locally
+- Canonicalise audio to a consistent form before analysis
 - Extract vocal features from speech
 - Detect pause and timing patterns
 - Combine audio features with optional transcript text
-- Produce explainable JSON output
+- Produce explainable, versioned JSON output
 - Validate with both synthetic and real local audio
 - Run early prototypes on Apple Silicon without cloud GPU requirements
 
@@ -33,4 +34,4 @@ The project is built in small validated phases. Each phase should include tests,
 
 ## Privacy
 
-Private voice recordings should not be committed to this repository. Real audio validation should use local-only files.
+Private voice recordings and local-only working files must not be committed to this repository. Real audio validation uses local-only files. Repository ignore rules cover audio file types and local-only files, and a staged-file check guards against accidental commits.

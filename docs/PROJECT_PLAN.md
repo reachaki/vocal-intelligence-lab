@@ -24,12 +24,16 @@ It focuses on:
 
 - audio ingestion
 - audio metadata
+- audio preprocessing and canonicalisation
 - vocal feature extraction
+- voice activity detection
 - pause detection
 - speech energy analysis
 - pitch and loudness profiles
+- threshold calibration and configuration
 - transcript-aware interpretation
 - conversation timing policy
+- a versioned output schema
 - local demos
 - testable outputs
 
@@ -51,21 +55,34 @@ The early prototype must run on:
 - no dedicated NVIDIA GPU
 - no paid cloud dependency
 
+## Roadmap principles
+
+- Build in small phases, each committed separately.
+- Every phase ships at least one meaningful validation method.
+- Deterministic fixtures and shared building blocks come before the features that depend on them.
+- Qualitative labels are derived from a single versioned configuration, not scattered constants.
+- All JSON output conforms to one versioned schema.
+- Private recordings and local-only files stay out of version control.
+
 ## Development phases
 
 ### Phase 0 — Project foundation
 
-Set up the Python package, test framework, CLI entry point, and clean project structure.
+Set up the Python package, test framework, CLI entry point, and a clean project structure.
 
 Deliverables:
 - importable Python package
 - basic CLI shell
 - pytest smoke test
+- documented Python version and a pinned dependency lock
+- repository ignore rules and a staged-file privacy check
 - clean README update
 
 Validation:
 - package imports successfully
+- the audio stack imports and loads a generated sample
 - tests pass locally
+- the privacy check rejects audio files and local-only files from staging
 
 ### Phase 1 — Audio ingestion
 
@@ -78,12 +95,62 @@ Deliverables:
 - channel count
 - waveform shape
 - file format handling notes
+- clear errors for unsupported or malformed files
 
 Validation:
-- test with synthetic generated WAV
+- test with a synthetic generated WAV
 - test with one real short recording
+- test rejection of an empty or unreadable file
 
-### Phase 2 — Loudness and energy analysis
+### Phase 2 — Synthetic audio fixtures
+
+Provide deterministic audio generators so feature phases can be tested without external files.
+
+Deliverables:
+- synthetic audio generation helpers
+- silence and tone fixtures
+- quiet and loud fixtures
+- pause-gap fixtures
+- simple pitch fixtures
+- fixtures usable directly by later feature tests
+
+Validation:
+- fixtures generate without external files
+- generated fixtures have known, documented properties (duration, level, gap positions)
+
+### Phase 3 — Audio preprocessing and canonicalisation
+
+Convert arbitrary input audio into a consistent internal form before feature extraction.
+
+Deliverables:
+- mono downmix
+- resampling to a fixed target sample rate (for example 16 kHz)
+- DC-offset removal
+- optional peak normalisation that preserves meaningful loudness features
+- a duration guard with a documented supported-length ceiling
+- a documented note on what is and is not normalised
+
+Validation:
+- equivalent feature-relevant output for the same utterance loaded at two sample rates
+- equivalent output for the same utterance at two input gains where loudness is normalised
+- the duration guard warns above the configured ceiling
+
+### Phase 4 — Real-audio validation protocol
+
+Define the repeatable real-audio protocol before the feature phases that depend on it.
+
+Deliverables:
+- a documented sample set: normal, soft, loud, fast, slow, expressive, and thinking-pause speech, plus a clean-versus-noisy pair
+- pre-registered expected labels recorded at capture time
+- objective anchors where practical (for example measured words per minute, or a target level offset)
+- a manual result template with discrete fields
+- instructions for producing and storing local-only samples
+
+Validation:
+- the protocol document is reviewed
+- at least one sample is captured and labelled using the template
+
+### Phase 5 — Loudness and energy analysis
 
 Extract energy-related speech features.
 
@@ -95,69 +162,99 @@ Deliverables:
 - simple loudness labels
 
 Validation:
-- synthetic quiet/loud audio tests
-- real soft vs loud voice comparison
+- synthetic quiet/loud fixture tests with a documented numeric tolerance
+- real soft vs loud comparison against the pre-registered labels
 
-### Phase 3 — Silence and pause detection
+### Phase 6 — Voice activity detection and noise-floor estimation
 
-Detect silence regions and possible thinking pauses.
+Provide a single shared speech/non-speech segmentation and an adaptive noise floor, reused by pause detection, pace estimation, and the event timeline.
 
 Deliverables:
-- silence thresholding
+- a noise-floor estimate (for example ambient or percentile based)
+- a relative, noise-aware speech threshold
+- speech/non-speech segmentation with minimum-duration smoothing
+- a segment list consumed by later phases
+
+Validation:
+- synthetic speech-in-silence with known onset and offset times, within a documented tolerance
+- stable segmentation across a clean and an added-noise version of the same clip
+
+### Phase 7 — Silence and pause detection
+
+Detect silence regions and possible thinking pauses from the shared segmentation.
+
+Deliverables:
+- pause regions derived from the speech segmentation
 - pause duration list
 - short/medium/long pause labels
 - pause summary
 
 Validation:
-- synthetic audio with known silence intervals
-- real recording with deliberate pauses
+- synthetic audio with known silence intervals, boundaries within a documented tolerance
+- real connected speech with marked pauses, reporting missed and spurious pauses
 
-### Phase 4 — Pitch analysis
+### Phase 8 — Pitch analysis
 
-Estimate pitch behaviour over time.
+Estimate pitch behaviour over time with explicit handling of unvoiced frames.
 
 Deliverables:
-- pitch contour extraction
-- pitch stability estimate
+- pitch contour extraction with explicit voiced/unvoiced handling
+- a documented fundamental-frequency search range
+- pitch stability estimate over voiced frames only
 - animated vs flat delivery label
 - rising/falling pitch trend
 
 Validation:
-- synthetic tones where possible
-- real expressive vs monotone speech sample
+- synthetic tones of known fundamental within a documented tolerance
+- a real expressive vs monotone sample, including a rising vs falling check (question vs statement)
 
-### Phase 5 — Speech pace estimation
+### Phase 9 — Speech pace estimation
 
-Estimate speaking speed using signal-level heuristics.
+Estimate speaking speed using signal-level heuristics over the speech-active regions.
 
 Deliverables:
-- speech segment count
-- onset/energy-based pace estimate
+- speech-active duration from the segmentation
+- a syllable-rate estimate normalised by speech-active time
 - slow/normal/fast label
-- limitations documented
+- documented method and limitations
 
 Validation:
-- real slow and fast reading samples
-- compare estimated labels manually
+- real samples read from a known script, compared against measured words per minute
+- the estimate correlates with the measured rate, not only ordered correctly
 
-### Phase 6 — Unified feature summary
+### Phase 10 — Threshold calibration and versioned configuration
 
-Combine extracted audio features into a structured summary.
+Centralise the numeric cut-points behind every qualitative label.
 
 Deliverables:
-- JSON output schema
+- a single versioned configuration file for all label thresholds
+- data-driven cut-points derived from the real-sample set
+- a configuration version stamped into outputs
+- a documented calibration procedure
+
+Validation:
+- labelled samples map to their intended labels using the configuration
+- a threshold change requires only a configuration edit
+
+### Phase 11 — Unified feature summary and versioned output schema
+
+Combine extracted audio features into a structured summary defined by a single versioned schema.
+
+Deliverables:
+- a single versioned JSON output schema with a schema_version field
 - duration
 - loudness profile
 - pause profile
 - pitch profile
 - pace estimate
-- confidence/limitations field
+- a confidence and limitations field
+- reserved recommendation, evidence, and uncertainty fields
 
 Validation:
-- CLI produces stable JSON
-- tests check required fields
+- the CLI produces stable JSON that validates against the schema
+- a schema and version regression test fails on unintended field changes
 
-### Phase 7 — Conversation policy engine
+### Phase 12 — Conversation policy engine
 
 Create a rule-based policy for conversation timing.
 
@@ -172,103 +269,99 @@ Deliverables:
 - policy module
 - documented rules
 - explainable reason field
+- thresholds sourced from the versioned configuration and marked provisional until the real-validation run
 
 Validation:
 - unit tests for each policy output
 - manual examples with sample feature inputs
 
-### Phase 8 — Transcript integration
+### Phase 13 — Transcript integration
 
 Allow optional transcript text alongside audio features.
 
 Deliverables:
-- transcript input option
+- optional transcript input supplied by file path or standard input
 - unfinished phrase detection
 - filler word detection
 - uncertainty indicators
 - combined audio/text reasoning
+- a requirement that committed examples use synthetic placeholder text
 
 Validation:
 - examples with and without transcript
 - tests for unfinished text cases
 
-### Phase 9 — Local recording utility
+### Phase 14 — Local recording utility
 
 Add a simple local microphone recording workflow.
 
 Deliverables:
-- short audio recording command if feasible
-- saves local WAV files outside Git
-- clear privacy warning
+- a short audio recording command if feasible
+- recordings written only to an ignored local directory
+- a clear privacy notice
+- a documented command to delete local recordings
 - no recordings committed
 
 Validation:
-- record 5-second sample
-- inspect with Phase 1 command
+- record a short sample
+- inspect it with the ingestion command
+- confirm recordings are ignored by version control
 
-### Phase 10 — Synthetic audio test suite
+### Phase 15 — Synthetic test-suite expansion
 
-Generate artificial test audio for reliable automated tests.
+Extend the deterministic fixtures into a broad automated test suite.
 
 Deliverables:
-- synthetic audio generation helpers
-- quiet/loud samples
-- silence gap samples
-- simple pitch samples
+- expanded edge-case fixtures
+- parametrised ranges
+- coverage for preprocessing, segmentation, and feature thresholds
 
 Validation:
 - tests run without external files
-- predictable output ranges
+- documented expected output ranges with numeric tolerances
 
-### Phase 11 — Real sample validation protocol
+### Phase 16 — Real-sample validation run
 
-Create a repeatable manual validation protocol using local recordings.
-
-Sample set:
-- normal voice
-- soft voice
-- loud voice
-- fast speech
-- slow speech
-- dramatic/expressive speech
-- speech with long thinking pauses
+Execute the Phase 4 protocol across all features.
 
 Deliverables:
-- documented protocol
-- expected observations
-- manual result template
+- a full run of the protocol against every feature
+- completed result templates
+- a saved local results summary for run-to-run comparison
 
 Validation:
-- complete at least one local validation run
+- complete at least one full local validation run
+- record pass/fail against the pre-registered labels
 
-### Phase 12 — Dataset format
+### Phase 17 — Dataset format
 
 Define a small labelled example format.
 
 Deliverables:
-- JSONL schema
+- a JSONL schema that references the versioned output schema
 - fields for audio path, transcript, extracted features, human label, desired behaviour
-- example entries with placeholder paths
+- example entries with placeholder paths and placeholder transcript text
 
 Validation:
 - schema validation tests
-- example file passes validation
+- the example file passes validation
 
-### Phase 13 — Baseline classifier
+### Phase 18 — Baseline classifier
 
 Train a small classical ML model on extracted feature rows.
 
 Deliverables:
-- scikit-learn baseline
-- train/evaluate script
+- a scikit-learn baseline
+- a train/evaluate script with a held-out split
+- a majority-class baseline comparison
 - model card notes
-- clear warning about tiny dataset limitations
+- a clear warning about small-dataset limitations
 
 Validation:
-- toy dataset training test
-- evaluation metrics printed
+- a toy dataset training test using a train/test split
+- evaluation metrics printed with per-class support and the baseline comparison
 
-### Phase 14 — Evaluation reporting
+### Phase 19 — Evaluation reporting
 
 Add basic evaluation tools.
 
@@ -276,40 +369,44 @@ Deliverables:
 - accuracy
 - confusion matrix
 - wrong example inspection
-- small report output
+- a small report output
 
 Validation:
-- evaluation script works on toy dataset
+- the evaluation script works on the toy dataset
 
-### Phase 15 — Chunked audio simulation
+### Phase 20 — Chunked audio simulation
 
 Process audio in chunks to simulate live conversation.
 
 Deliverables:
-- chunk processor
+- a chunk processor
 - partial feature updates
-- evolving policy recommendation
-- simulation CLI
+- an evolving policy recommendation
+- a file-based replay path through the chunk pipeline
+- a simulation CLI
 
 Validation:
 - run on a recorded sample
 - observe policy changes over time
+- chunked output reasonably matches whole-file processing of the same file
 
-### Phase 16 — Live microphone prototype
+### Phase 21 — Live microphone prototype
 
 Attempt live local microphone analysis.
 
 Deliverables:
-- live mode if feasible
+- a live mode if feasible, reusing the chunk processor
 - chunk-based audio capture
-- rolling feature summary
+- a rolling feature summary
+- a documented latency target
 - console output
 
 Validation:
-- manual live demo
-- fallback documented if microphone library issues occur
+- a manual live demo
+- measured per-chunk processing time below the chosen update interval
+- a documented fallback to file replay if microphone capture is unavailable
 
-### Phase 17 — Conversation event timeline
+### Phase 22 — Conversation event timeline
 
 Represent audio as a timeline of events.
 
@@ -322,20 +419,20 @@ Events may include:
 - possible_interruption_point
 
 Deliverables:
-- event model
-- event timeline JSON
-- CLI output option
+- an event model
+- an event timeline JSON that uses the versioned schema
+- a CLI output option
 
 Validation:
 - tests from synthetic audio
-- manual real recording check
+- comparison against a human-marked timeline on a real recording, reporting matched, missed, and spurious events
 
-### Phase 18 — External model interface
+### Phase 23 — External interface and schema freeze
 
-Produce a clean JSON object that another system could consume.
+Produce a clean, stable JSON object that another system could consume.
 
 Deliverables:
-- stable output schema
+- a frozen, versioned output schema for external consumers
 - recommendation field
 - evidence field
 - uncertainty field
@@ -343,36 +440,36 @@ Deliverables:
 
 Validation:
 - schema tests
-- example output in docs
+- an example output in the docs
 
-### Phase 19 — Documentation polish
+### Phase 24 — Documentation polish
 
 Make the project understandable to a public technical audience.
 
 Deliverables:
-- improved README
+- an improved README
 - architecture notes
 - validation notes
 - example commands
-- limitations section
+- a limitations section
 
 Validation:
-- fresh clone setup instructions reviewed
+- fresh clone setup instructions reviewed in a clean environment
 
-### Phase 20 — Public demo milestone
+### Phase 25 — Public demo milestone
 
 Create a simple end-to-end demo.
 
 Deliverables:
 - inspect an audio file
 - extract features
-- produce feature summary
-- produce conversation recommendation
+- produce a feature summary
+- produce a conversation recommendation
 - show example JSON
 
 Validation:
-- run demo command locally
-- include expected output example
+- run the demo command locally
+- include an expected output example
 
 ## Long-term extensions
 

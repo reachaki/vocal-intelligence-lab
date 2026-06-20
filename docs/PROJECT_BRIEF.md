@@ -66,12 +66,16 @@ Primary development machine:
 A working local prototype where I can provide an audio file and receive output like:
 
 {
+  "schema_version": "1.0",
+  "config_version": "1.0",
   "transcript": "optional placeholder",
   "duration_seconds": 8.4,
   "speech_rate_estimate": "fast",
   "volume_profile": "rising",
   "pause_pattern": "thinking_pause_detected",
   "pitch_profile": "animated",
-  "conversation_recommendation": "wait_do_not_interrupt",
+  "conversation_recommendation": "wait",
   "reason": "User paused briefly after unfinished phrase with low falling energy, likely thinking."
 }
+
+The `conversation_recommendation` field is one of a fixed set of values: `wait`, `respond`, `clarify`, `interrupt_politely`, `challenge`. All output conforms to a single versioned schema.
