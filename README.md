@@ -28,6 +28,7 @@ Planning and project foundation.
 - [Validation Plan](docs/VALIDATION_PLAN.md)
 - [Project Brief](docs/PROJECT_BRIEF.md)
 - [Progress](docs/PROGRESS.md)
+- [Real-Audio Validation Protocol](docs/REAL_AUDIO_PROTOCOL.md)
 
 ## Development approach
 
