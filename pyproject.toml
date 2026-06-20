@@ -9,7 +9,7 @@ readme = "README.md"
 requires-python = ">=3.11,<3.13"
 authors = [{ name = "Akshyat Dali", email = "akshyatdali@gmail.com" }]
 dynamic = ["version"]
-dependencies = ["soundfile>=0.12,<1.0"]
+dependencies = ["numpy>=1.26,<3.0", "soundfile>=0.12,<1.0"]
 
 [project.optional-dependencies]
 dev = ["pytest"]

@@ -4,13 +4,13 @@ This document tracks the current state of the project: the active phase, the lat
 
 ## Current phase
 
-Phase 1 — Audio ingestion (implemented; pending review).
+Phase 2 — Synthetic audio fixtures (implemented; pending review).
 
 ## Latest implementation commit
 
-`b05bbc7` — Add Python package foundation, CLI shell, and privacy check (latest on `main`).
+`965a5f7` — Add audio ingestion and metadata inspect command (merged to `main`).
 
-Phase 1 audio ingestion is proposed in the open pull request from `phase-1-audio-ingestion`.
+Phase 2 synthetic audio fixtures are proposed in the open pull request from `phase-2-synthetic-fixtures`.
 
 ## Latest review status
 
@@ -18,19 +18,19 @@ In review — pull request open into `main`.
 
 ## Validation performed
 
-- Local environment pinned to Python 3.12 for audio work (`requirements.txt`, `requirements-lock.txt`).
-- Audio metadata is read from a tiny WAV generated in a temporary test directory.
-- Missing-file, not-a-file, and unreadable-file handling is tested.
-- The `inspect` command output is tested.
+- Deterministic generators produce silence, tones, quiet/loud tones, and a tone-gap-tone fixture with known properties.
+- Generated tones have a verified dominant frequency, expected length, and expected amplitude.
+- The pause-gap fixture has an exactly known silent region (start and end positions).
+- A generated tone is written to a temporary WAV and read back by the audio ingestion command.
 - Test suite passes (`pytest`); the command-line shell runs (`python -m vocal_intel --version`, `--help`, `inspect`).
 - The staged-file check rejects private audio and local-only files.
 
 ## Known limitations
 
-- Only WAV files are validated. Other formats may work where the audio library supports them, but they are not yet verified.
+- Fixtures are simple, deterministic test signals (sine tones and silence); they are not real speech.
 - No feature extraction yet (no loudness, pause, pitch, voice-activity, or pace analysis).
 - Feature-extraction libraries (for example librosa, scipy, scikit-learn) are not installed yet; they are introduced in later phases.
 
 ## Next approval gate
 
-Merge of the Phase 1 pull request, then Phase 2 — Synthetic audio fixtures.
+Merge of the Phase 2 pull request, then Phase 3 — Audio preprocessing and canonicalisation.
