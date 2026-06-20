@@ -8,5 +8,6 @@
 #
 # For the exact, fully resolved environment see requirements-lock.txt.
 
+numpy==2.4.6
 soundfile==0.14.0
 pytest==9.1.1
