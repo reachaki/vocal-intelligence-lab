@@ -1,0 +1,11 @@
+numpy
+pandas
+matplotlib
+librosa
+soundfile
+scipy
+scikit-learn
+pytest
+rich
+typer
+pydantic

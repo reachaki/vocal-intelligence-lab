@@ -1,0 +1,23 @@
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
+.env
+
+# Local-only project control notes
+.local/
+*.private.md
+
+# Local/private audio and generated data
+data/raw/
+data/processed/
+recordings/
+models/
+
+*.wav
+*.mp3
+*.m4a
+*.flac
+*.ogg
+*.caf
+*.aiff
