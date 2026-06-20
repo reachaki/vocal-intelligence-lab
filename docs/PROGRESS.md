@@ -4,28 +4,33 @@ This document tracks the current state of the project: the active phase, the lat
 
 ## Current phase
 
-Phase 0 — Project foundation (complete).
+Phase 1 — Audio ingestion (implemented; pending review).
 
 ## Latest implementation commit
 
-`b05bbc7` — Add Python package foundation, CLI shell, and privacy check.
+`b05bbc7` — Add Python package foundation, CLI shell, and privacy check (latest on `main`).
+
+Phase 1 audio ingestion is proposed in the open pull request from `phase-1-audio-ingestion`.
 
 ## Latest review status
 
-Not yet reviewed.
+In review — pull request open into `main`.
 
 ## Validation performed
 
-- Test suite passes (`pytest`).
-- Package imports and the command-line shell runs (`python -m vocal_intel --version`).
+- Local environment pinned to Python 3.12 for audio work (`requirements.txt`, `requirements-lock.txt`).
+- Audio metadata is read from a tiny WAV generated in a temporary test directory.
+- Missing-file, not-a-file, and unreadable-file handling is tested.
+- The `inspect` command output is tested.
+- Test suite passes (`pytest`); the command-line shell runs (`python -m vocal_intel --version`, `--help`, `inspect`).
 - The staged-file check rejects private audio and local-only files.
 
 ## Known limitations
 
-- The command-line tool is a shell only; no audio analysis yet.
-- The audio dependencies are not installed in the development environment, so audio-stack validation is deferred.
-- The environment currently uses a newer Python than the audio stack reliably supports; a pinned environment is planned before audio work begins.
+- Only WAV files are validated. Other formats may work where the audio library supports them, but they are not yet verified.
+- No feature extraction yet (no loudness, pause, pitch, voice-activity, or pace analysis).
+- Feature-extraction libraries (for example librosa, scipy, scikit-learn) are not installed yet; they are introduced in later phases.
 
 ## Next approval gate
 
-Phase 1 — Audio ingestion. Awaiting approval to begin, including a pinned environment for the audio dependencies.
+Merge of the Phase 1 pull request, then Phase 2 — Synthetic audio fixtures.
