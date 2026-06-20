@@ -32,6 +32,35 @@ Planning and project foundation.
 
 The project is built in small validated phases. Each phase should include tests, a runnable demo, or a documented manual validation check.
 
+## Development
+
+The project targets Python 3.11 or newer. From a fresh checkout:
+
+```
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev]"
+```
+
+Run the test suite and the command-line shell:
+
+```
+pytest
+vocal-intel --version
+```
+
+The command-line shell can also be run without installation:
+
+```
+python -m vocal_intel --version
+```
+
+A staged-file check helps keep private audio and local-only files out of version control, and can be used as a pre-commit hook:
+
+```
+python scripts/check_staged_files.py
+```
+
 ## Privacy
 
 Private voice recordings and local-only working files must not be committed to this repository. Real audio validation uses local-only files. Repository ignore rules cover audio file types and local-only files, and a staged-file check guards against accidental commits.

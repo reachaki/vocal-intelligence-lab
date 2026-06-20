@@ -4,6 +4,11 @@ __pycache__/
 .DS_Store
 .env
 
+# Editor and OS artifacts
+*.swp
+*.swo
+*~
+
 # Local-only project control notes
 .local/
 *.private.md

@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vocal-intelligence-lab"
+description = "Local-first prototype for analysing speech beyond transcript text."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Akshyat Dali", email = "akshyatdali@gmail.com" }]
+dynamic = ["version"]
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[project.scripts]
+vocal-intel = "vocal_intel.cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.dynamic]
+version = { attr = "vocal_intel.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
