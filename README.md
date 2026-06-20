@@ -27,6 +27,7 @@ Planning and project foundation.
 - [Architecture](docs/ARCHITECTURE.md)
 - [Validation Plan](docs/VALIDATION_PLAN.md)
 - [Project Brief](docs/PROJECT_BRIEF.md)
+- [Progress](docs/PROGRESS.md)
 
 ## Development approach
 
