@@ -1,11 +1,12 @@
-numpy
-pandas
-matplotlib
-librosa
-soundfile
-scipy
-scikit-learn
-pytest
-rich
-typer
-pydantic
+# Direct dependencies for the current phase, pinned for reproducibility.
+#
+# Target interpreter: Python 3.12 (3.11 also supported). Newer interpreters are
+# avoided for now because the feature-extraction libraries lag the latest Python.
+#
+# Feature-extraction libraries (for example librosa, scipy, scikit-learn) are
+# introduced in later phases and are intentionally not required yet.
+#
+# For the exact, fully resolved environment see requirements-lock.txt.
+
+soundfile==0.14.0
+pytest==9.1.1

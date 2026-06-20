@@ -1,12 +1,14 @@
 """Command-line interface for Vocal Intelligence Lab.
 
-Phase 0 provides a minimal CLI shell only. Audio inspection and analysis
-commands are added in later phases.
+The CLI is built up phase by phase. It currently provides a ``version`` command
+and an ``inspect`` command that reports metadata for a local audio file.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
+import sys
 
 from vocal_intel import __version__
 
@@ -23,8 +25,31 @@ def build_parser() -> argparse.ArgumentParser:
         version=f"vocal-intel {__version__}",
     )
     subparsers = parser.add_subparsers(dest="command")
+
     subparsers.add_parser("version", help="Print the installed version.")
+
+    inspect_parser = subparsers.add_parser(
+        "inspect",
+        help="Inspect a local audio file and print its metadata as JSON.",
+    )
+    inspect_parser.add_argument(
+        "path",
+        help="Path to a local audio file (WAV is supported and validated).",
+    )
     return parser
+
+
+def _run_inspect(path: str) -> int:
+    # Imported lazily so version/help do not require the audio stack.
+    from vocal_intel.ingest import AudioIngestionError, inspect_audio
+
+    try:
+        metadata = inspect_audio(path)
+    except AudioIngestionError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    print(json.dumps(metadata.to_dict(), indent=2))
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -35,6 +60,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "version":
         print(f"vocal-intel {__version__}")
         return 0
+    if args.command == "inspect":
+        return _run_inspect(args.path)
 
     # No subcommand given: show help as a friendly default.
     parser.print_help()
