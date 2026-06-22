@@ -4,8 +4,8 @@ Pause detection deliberately consumes the shared VAD segmentation instead of
 running a second audio classifier. A pause is a non-speech region between two
 speech regions; leading and trailing silence are not counted as pauses.
 
-The duration cut-points below are PROVISIONAL placeholders. They are scheduled
-to move into the versioned threshold configuration in a later phase.
+The duration cut-points are sourced from the versioned threshold configuration
+and remain provisional until real-sample calibration.
 """
 
 from __future__ import annotations
@@ -14,11 +14,12 @@ import math
 from dataclasses import dataclass
 from typing import Iterable
 
+from vocal_intel.config import DEFAULT_THRESHOLD_CONFIG, ThresholdConfig
 from vocal_intel.vad import NON_SPEECH, SPEECH, Segment, VadResult
 
-DEFAULT_MIN_PAUSE_SECONDS = 0.20
-SHORT_PAUSE_MAX_SECONDS = 0.50
-MEDIUM_PAUSE_MAX_SECONDS = 1.00
+DEFAULT_MIN_PAUSE_SECONDS = DEFAULT_THRESHOLD_CONFIG.pauses.min_pause_seconds
+SHORT_PAUSE_MAX_SECONDS = DEFAULT_THRESHOLD_CONFIG.pauses.short_pause_max_seconds
+MEDIUM_PAUSE_MAX_SECONDS = DEFAULT_THRESHOLD_CONFIG.pauses.medium_pause_max_seconds
 
 SHORT_PAUSE = "short"
 MEDIUM_PAUSE = "medium"
@@ -63,6 +64,7 @@ class PauseAnalysis:
     pause_durations_seconds: list
     summary: PauseSummary
     source_segment_count: int
+    config_version: str = DEFAULT_THRESHOLD_CONFIG.version
 
 
 def _validate_duration(value: float, name: str, *, allow_zero: bool = False) -> float:
@@ -93,15 +95,17 @@ def _validate_thresholds(
 def pause_label(
     duration_seconds: float,
     *,
-    short_pause_max_seconds: float = SHORT_PAUSE_MAX_SECONDS,
-    medium_pause_max_seconds: float = MEDIUM_PAUSE_MAX_SECONDS,
+    short_pause_max_seconds: float | None = None,
+    medium_pause_max_seconds: float | None = None,
+    config: ThresholdConfig = DEFAULT_THRESHOLD_CONFIG,
 ) -> str:
     """Return the provisional short / medium / long label for a pause."""
     duration = _validate_duration(duration_seconds, "duration_seconds")
+    thresholds = config.pauses
     _, short_max, medium_max = _validate_thresholds(
-        DEFAULT_MIN_PAUSE_SECONDS,
-        short_pause_max_seconds,
-        medium_pause_max_seconds,
+        thresholds.min_pause_seconds,
+        thresholds.short_pause_max_seconds if short_pause_max_seconds is None else short_pause_max_seconds,
+        thresholds.medium_pause_max_seconds if medium_pause_max_seconds is None else medium_pause_max_seconds,
     )
     if duration < short_max:
         return SHORT_PAUSE
@@ -142,16 +146,18 @@ def _summarise(pauses: list) -> PauseSummary:
 def detect_pauses_from_segments(
     segments: Iterable[Segment],
     *,
-    min_pause_seconds: float = DEFAULT_MIN_PAUSE_SECONDS,
-    short_pause_max_seconds: float = SHORT_PAUSE_MAX_SECONDS,
-    medium_pause_max_seconds: float = MEDIUM_PAUSE_MAX_SECONDS,
+    min_pause_seconds: float | None = None,
+    short_pause_max_seconds: float | None = None,
+    medium_pause_max_seconds: float | None = None,
+    config: ThresholdConfig = DEFAULT_THRESHOLD_CONFIG,
 ) -> PauseAnalysis:
     """Find non-speech regions between speech regions."""
     segment_list = list(segments)
+    thresholds = config.pauses
     minimum, short_max, medium_max = _validate_thresholds(
-        min_pause_seconds,
-        short_pause_max_seconds,
-        medium_pause_max_seconds,
+        thresholds.min_pause_seconds if min_pause_seconds is None else min_pause_seconds,
+        thresholds.short_pause_max_seconds if short_pause_max_seconds is None else short_pause_max_seconds,
+        thresholds.medium_pause_max_seconds if medium_pause_max_seconds is None else medium_pause_max_seconds,
     )
     _validate_segments(segment_list)
 
@@ -181,6 +187,7 @@ def detect_pauses_from_segments(
                     duration,
                     short_pause_max_seconds=short_max,
                     medium_pause_max_seconds=medium_max,
+                    config=config,
                 ),
             )
         )
@@ -191,6 +198,7 @@ def detect_pauses_from_segments(
         pause_durations_seconds=durations,
         summary=_summarise(pauses),
         source_segment_count=len(segment_list),
+        config_version=config.version,
     )
 
 

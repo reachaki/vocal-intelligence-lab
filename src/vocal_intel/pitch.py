@@ -6,8 +6,8 @@ range, then reports voiced frames, a pitch contour, voiced-only stability, a
 flat / animated delivery label, and a rising / falling / stable trend label.
 
 The method is suitable for deterministic synthetic validation. Real speech
-needs the manual validation protocol, and the provisional thresholds below are
-scheduled to move into the versioned configuration in a later phase.
+needs the manual validation protocol, and qualitative thresholds are sourced
+from the versioned threshold configuration.
 """
 
 from __future__ import annotations
@@ -17,16 +17,18 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from vocal_intel.config import DEFAULT_THRESHOLD_CONFIG, ThresholdConfig
+
 DEFAULT_FRAME_MS = 40.0
 DEFAULT_HOP_MS = 10.0
-DEFAULT_F0_MIN_HZ = 75.0
-DEFAULT_F0_MAX_HZ = 400.0
-DEFAULT_VOICING_CLARITY = 0.30
-DEFAULT_MIN_RMS = 1e-4
+DEFAULT_F0_MIN_HZ = DEFAULT_THRESHOLD_CONFIG.pitch.f0_min_hz
+DEFAULT_F0_MAX_HZ = DEFAULT_THRESHOLD_CONFIG.pitch.f0_max_hz
+DEFAULT_VOICING_CLARITY = DEFAULT_THRESHOLD_CONFIG.pitch.voicing_clarity
+DEFAULT_MIN_RMS = DEFAULT_THRESHOLD_CONFIG.pitch.min_rms
 
-FLAT_STABILITY_MAX_CENTS = 50.0
-TREND_MIN_CHANGE_HZ = 10.0
-TREND_MIN_CHANGE_RATIO = 0.05
+FLAT_STABILITY_MAX_CENTS = DEFAULT_THRESHOLD_CONFIG.pitch.flat_stability_max_cents
+TREND_MIN_CHANGE_HZ = DEFAULT_THRESHOLD_CONFIG.pitch.trend_min_change_hz
+TREND_MIN_CHANGE_RATIO = DEFAULT_THRESHOLD_CONFIG.pitch.trend_min_change_ratio
 
 FLAT_DELIVERY = "flat"
 ANIMATED_DELIVERY = "animated"
@@ -59,6 +61,7 @@ class PitchAnalysis:
     pitch_stability_cents: float | None
     delivery_label: str
     trend_label: str
+    config_version: str = DEFAULT_THRESHOLD_CONFIG.version
 
 
 def _as_mono(samples) -> np.ndarray:
@@ -150,15 +153,25 @@ def _pitch_stability_cents(frequencies: np.ndarray, median_frequency: float) -> 
     return float(np.std(cents))
 
 
-def _delivery_label(stability_cents: float | None) -> str:
+def _delivery_label(
+    stability_cents: float | None,
+    *,
+    config: ThresholdConfig = DEFAULT_THRESHOLD_CONFIG,
+) -> str:
     if stability_cents is None:
         return UNKNOWN_DELIVERY
-    if stability_cents <= FLAT_STABILITY_MAX_CENTS:
+    if stability_cents <= config.pitch.flat_stability_max_cents:
         return FLAT_DELIVERY
     return ANIMATED_DELIVERY
 
 
-def _trend_label(times: np.ndarray, frequencies: np.ndarray, median_frequency: float | None) -> str:
+def _trend_label(
+    times: np.ndarray,
+    frequencies: np.ndarray,
+    median_frequency: float | None,
+    *,
+    config: ThresholdConfig = DEFAULT_THRESHOLD_CONFIG,
+) -> str:
     if median_frequency is None or len(frequencies) < 2:
         return UNKNOWN_TREND
     span = float(times[-1] - times[0])
@@ -171,7 +184,10 @@ def _trend_label(times: np.ndarray, frequencies: np.ndarray, median_frequency: f
         return UNKNOWN_TREND
     slope = float(np.sum(centred_times * (frequencies - float(np.mean(frequencies)))) / denominator)
     estimated_change = slope * span
-    threshold = max(TREND_MIN_CHANGE_HZ, TREND_MIN_CHANGE_RATIO * median_frequency)
+    threshold = max(
+        config.pitch.trend_min_change_hz,
+        config.pitch.trend_min_change_ratio * median_frequency,
+    )
 
     if estimated_change > threshold:
         return RISING_TREND
@@ -186,10 +202,11 @@ def analyze_pitch(
     *,
     frame_ms: float = DEFAULT_FRAME_MS,
     hop_ms: float = DEFAULT_HOP_MS,
-    f0_min_hz: float = DEFAULT_F0_MIN_HZ,
-    f0_max_hz: float = DEFAULT_F0_MAX_HZ,
-    min_rms: float = DEFAULT_MIN_RMS,
-    voicing_clarity: float = DEFAULT_VOICING_CLARITY,
+    f0_min_hz: float | None = None,
+    f0_max_hz: float | None = None,
+    min_rms: float | None = None,
+    voicing_clarity: float | None = None,
+    config: ThresholdConfig = DEFAULT_THRESHOLD_CONFIG,
 ) -> PitchAnalysis:
     """Estimate a pitch contour from mono audio."""
     arr = _as_mono(samples)
@@ -197,13 +214,18 @@ def analyze_pitch(
         raise PitchError("sample_rate must be positive")
     frame_duration = _positive_finite(frame_ms, "frame_ms")
     hop_duration = _positive_finite(hop_ms, "hop_ms")
-    minimum_rms = float(min_rms)
+    thresholds = config.pitch
+    minimum_rms = thresholds.min_rms if min_rms is None else float(min_rms)
     if not math.isfinite(minimum_rms) or minimum_rms < 0.0:
         raise PitchError("min_rms must be finite and non-negative")
-    clarity_threshold = float(voicing_clarity)
+    clarity_threshold = thresholds.voicing_clarity if voicing_clarity is None else float(voicing_clarity)
     if not 0.0 <= clarity_threshold <= 1.0:
         raise PitchError("voicing_clarity must be within [0.0, 1.0]")
-    f0_min, f0_max = _validate_search_range(f0_min_hz, f0_max_hz, sample_rate)
+    f0_min, f0_max = _validate_search_range(
+        thresholds.f0_min_hz if f0_min_hz is None else f0_min_hz,
+        thresholds.f0_max_hz if f0_max_hz is None else f0_max_hz,
+        sample_rate,
+    )
 
     frame_length = max(1, int(round(frame_duration / 1000.0 * sample_rate)))
     hop_length = max(1, int(round(hop_duration / 1000.0 * sample_rate)))
@@ -253,6 +275,7 @@ def analyze_pitch(
         median_frequency_hz=median_frequency,
         mean_frequency_hz=mean_frequency,
         pitch_stability_cents=stability,
-        delivery_label=_delivery_label(stability),
-        trend_label=_trend_label(voiced_times, voiced_frequencies, median_frequency),
+        delivery_label=_delivery_label(stability, config=config),
+        trend_label=_trend_label(voiced_times, voiced_frequencies, median_frequency, config=config),
+        config_version=config.version,
     )

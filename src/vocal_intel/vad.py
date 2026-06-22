@@ -8,9 +8,9 @@ runs are then smoothed away.
 
 The noise floor is estimated from the quietest frames, so input is expected to
 contain some ambient / non-speech regions; a uniformly energetic clip has no
-quiet reference and is treated as non-speech. Thresholds are PROVISIONAL and
-documented; they are scheduled to be replaced by data-driven, versioned
-calibration in a later phase.
+quiet reference and is treated as non-speech. Thresholds are sourced from the
+versioned threshold configuration and remain provisional until real-sample
+calibration.
 """
 
 from __future__ import annotations
@@ -19,17 +19,18 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from vocal_intel.config import DEFAULT_THRESHOLD_CONFIG, ThresholdConfig
 from vocal_intel.loudness import frame_rms, to_dbfs
 
 DEFAULT_FRAME_MS = 25.0
 DEFAULT_HOP_MS = 10.0
 # A frame is speech when it is this many dB above the estimated noise floor.
-DEFAULT_THRESHOLD_MARGIN_DB = 8.0
+DEFAULT_THRESHOLD_MARGIN_DB = DEFAULT_THRESHOLD_CONFIG.vad.threshold_margin_db
 # Percentile of frame energies used to estimate the ambient noise floor.
-NOISE_FLOOR_PERCENTILE = 10.0
+NOISE_FLOOR_PERCENTILE = DEFAULT_THRESHOLD_CONFIG.vad.noise_floor_percentile
 # Smoothing: shorter runs are removed (speech) or bridged (silence).
-DEFAULT_MIN_SPEECH_SECONDS = 0.05
-DEFAULT_MIN_SILENCE_SECONDS = 0.05
+DEFAULT_MIN_SPEECH_SECONDS = DEFAULT_THRESHOLD_CONFIG.vad.min_speech_seconds
+DEFAULT_MIN_SILENCE_SECONDS = DEFAULT_THRESHOLD_CONFIG.vad.min_silence_seconds
 
 SPEECH = "speech"
 NON_SPEECH = "non_speech"
@@ -64,14 +65,21 @@ class VadResult:
     frame_rms: np.ndarray
     frame_is_speech: np.ndarray
     segments: list
+    config_version: str = DEFAULT_THRESHOLD_CONFIG.version
 
 
-def estimate_noise_floor(frame_energies, percentile: float = NOISE_FLOOR_PERCENTILE) -> float:
+def estimate_noise_floor(
+    frame_energies,
+    percentile: float | None = None,
+    *,
+    config: ThresholdConfig = DEFAULT_THRESHOLD_CONFIG,
+) -> float:
     """Estimate the ambient noise floor as a low percentile of frame energy."""
     arr = np.asarray(frame_energies, dtype=np.float64)
     if arr.size == 0:
         raise VadError("frame_energies must not be empty")
-    return float(np.percentile(arr, percentile))
+    pct = config.vad.noise_floor_percentile if percentile is None else float(percentile)
+    return float(np.percentile(arr, pct))
 
 
 def _remove_short_runs(flags: np.ndarray, value: bool, min_len: int) -> np.ndarray:
@@ -123,9 +131,10 @@ def detect_voice_activity(
     *,
     frame_ms: float = DEFAULT_FRAME_MS,
     hop_ms: float = DEFAULT_HOP_MS,
-    threshold_margin_db: float = DEFAULT_THRESHOLD_MARGIN_DB,
-    min_speech_seconds: float = DEFAULT_MIN_SPEECH_SECONDS,
-    min_silence_seconds: float = DEFAULT_MIN_SILENCE_SECONDS,
+    threshold_margin_db: float | None = None,
+    min_speech_seconds: float | None = None,
+    min_silence_seconds: float | None = None,
+    config: ThresholdConfig = DEFAULT_THRESHOLD_CONFIG,
 ) -> VadResult:
     """Segment a mono signal into speech and non-speech regions."""
     arr = np.asarray(samples, dtype=np.float64)
@@ -139,19 +148,22 @@ def detect_voice_activity(
     frame_length = max(1, int(round(frame_ms / 1000.0 * sample_rate)))
     hop_length = max(1, int(round(hop_ms / 1000.0 * sample_rate)))
     hop_seconds = hop_length / sample_rate
+    margin_db = config.vad.threshold_margin_db if threshold_margin_db is None else float(threshold_margin_db)
+    min_speech = config.vad.min_speech_seconds if min_speech_seconds is None else float(min_speech_seconds)
+    min_silence = config.vad.min_silence_seconds if min_silence_seconds is None else float(min_silence_seconds)
 
     energies = frame_rms(arr, frame_length, hop_length)
     frame_times = (np.arange(len(energies)) * hop_length / sample_rate).astype(np.float64)
 
-    noise_floor_rms = estimate_noise_floor(energies)
+    noise_floor_rms = estimate_noise_floor(energies, config=config)
     noise_floor_dbfs = to_dbfs(noise_floor_rms)
-    threshold_dbfs = noise_floor_dbfs + threshold_margin_db
+    threshold_dbfs = noise_floor_dbfs + margin_db
 
     frame_dbfs = np.array([to_dbfs(value) for value in energies], dtype=np.float64)
     is_speech = frame_dbfs >= threshold_dbfs
 
-    min_speech_frames = max(1, int(round(min_speech_seconds / hop_seconds)))
-    min_silence_frames = max(1, int(round(min_silence_seconds / hop_seconds)))
+    min_speech_frames = max(1, int(round(min_speech / hop_seconds)))
+    min_silence_frames = max(1, int(round(min_silence / hop_seconds)))
     is_speech = _remove_short_runs(is_speech, True, min_speech_frames)
     is_speech = _remove_short_runs(is_speech, False, min_silence_frames)
 
@@ -159,6 +171,7 @@ def detect_voice_activity(
     segments = _segments_from_flags(is_speech, frame_times, total_duration)
 
     return VadResult(
+        config_version=config.version,
         sample_rate=int(sample_rate),
         noise_floor_rms=noise_floor_rms,
         noise_floor_dbfs=noise_floor_dbfs,

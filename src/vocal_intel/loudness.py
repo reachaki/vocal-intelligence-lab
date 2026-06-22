@@ -4,11 +4,9 @@ Computes frame-level RMS energy, peak amplitude, and loudness summary
 statistics, and assigns a provisional ``quiet`` / ``normal`` / ``loud`` label.
 
 Absolute level is preserved: this module never normalises the input, so loudness
-features remain meaningful. The qualitative dBFS thresholds below are
-PROVISIONAL placeholders (chosen against simple synthetic tones) and depend on
-capture conditions; they are scheduled to be replaced by data-driven, versioned
-calibration in a later phase. For a comparison that does not depend on absolute
-thresholds, use :func:`compare_loudness`.
+features remain meaningful. Qualitative thresholds are sourced from the
+versioned threshold configuration. For a comparison that does not depend on
+absolute thresholds, use :func:`compare_loudness`.
 """
 
 from __future__ import annotations
@@ -18,13 +16,14 @@ from dataclasses import dataclass
 
 import numpy as np
 
+from vocal_intel.config import DEFAULT_THRESHOLD_CONFIG, ThresholdConfig
+
 DEFAULT_FRAME_MS = 25.0
 DEFAULT_HOP_MS = 10.0
 SILENCE_FLOOR_DBFS = -120.0
 
-# Provisional dBFS thresholds (full-scale reference = 1.0). See module docstring.
-QUIET_DBFS_MAX = -25.0
-LOUD_DBFS_MIN = -15.0
+QUIET_DBFS_MAX = DEFAULT_THRESHOLD_CONFIG.loudness.quiet_dbfs_max
+LOUD_DBFS_MIN = DEFAULT_THRESHOLD_CONFIG.loudness.loud_dbfs_min
 
 
 class LoudnessError(ValueError):
@@ -60,12 +59,17 @@ def to_dbfs(amplitude: float) -> float:
     return max(20.0 * math.log10(amp), SILENCE_FLOOR_DBFS)
 
 
-def loudness_label(rms_value: float) -> str:
+def loudness_label(
+    rms_value: float,
+    *,
+    config: ThresholdConfig = DEFAULT_THRESHOLD_CONFIG,
+) -> str:
     """Map an RMS value to a provisional quiet / normal / loud label."""
     db = to_dbfs(rms_value)
-    if db < QUIET_DBFS_MAX:
+    thresholds = config.loudness
+    if db < thresholds.quiet_dbfs_max:
         return "quiet"
-    if db < LOUD_DBFS_MIN:
+    if db < thresholds.loud_dbfs_min:
         return "normal"
     return "loud"
 
@@ -116,6 +120,7 @@ class LoudnessAnalysis:
     frame_times: np.ndarray
     frame_rms: np.ndarray
     sections: list
+    config_version: str = DEFAULT_THRESHOLD_CONFIG.version
 
 
 def _group_sections(labels, frame_times, total_duration) -> list:
@@ -140,6 +145,8 @@ def analyze_loudness(
     sample_rate: int,
     frame_ms: float = DEFAULT_FRAME_MS,
     hop_ms: float = DEFAULT_HOP_MS,
+    *,
+    config: ThresholdConfig = DEFAULT_THRESHOLD_CONFIG,
 ) -> LoudnessAnalysis:
     """Analyse loudness and energy without modifying the input level."""
     arr = _as_mono(samples)
@@ -153,17 +160,18 @@ def analyze_loudness(
     per_frame = frame_rms(arr, frame_length, hop_length)
     frame_times = (np.arange(len(per_frame)) * hop_length / sample_rate).astype(np.float64)
 
-    frame_labels = [loudness_label(value) for value in per_frame]
+    frame_labels = [loudness_label(value, config=config) for value in per_frame]
     total_duration = arr.size / sample_rate
     sections = _group_sections(frame_labels, frame_times, total_duration)
 
     return LoudnessAnalysis(
+        config_version=config.version,
         sample_rate=int(sample_rate),
         rms=overall_rms,
         peak=overall_peak,
         rms_dbfs=to_dbfs(overall_rms),
         peak_dbfs=to_dbfs(overall_peak),
-        label=loudness_label(overall_rms),
+        label=loudness_label(overall_rms, config=config),
         frame_times=frame_times,
         frame_rms=per_frame,
         sections=sections,

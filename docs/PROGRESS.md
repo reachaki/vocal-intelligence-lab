@@ -4,13 +4,13 @@ This document tracks the current state of the project: the active phase, the lat
 
 ## Current phase
 
-Phase 9 — Speech pace estimation (implemented; pending review).
+Phase 10 — Threshold calibration and versioned configuration (implemented; pending review).
 
 ## Latest implementation commit
 
-`0dd8f2e` — Merge pull request #9 from reachaki/phase-8-pitch-analysis (merged to `main`).
+`bc4d768` — Merge pull request #10 from reachaki/phase-9-speech-pace-estimation (merged to `main`).
 
-Phase 9 speech pace estimation is proposed in the open pull request from `phase-9-speech-pace-estimation`.
+Phase 10 threshold configuration is proposed in the open pull request from `phase-10-threshold-config`.
 
 ## Latest review status
 
@@ -18,24 +18,22 @@ In review — pull request open into `main`.
 
 ## Validation performed
 
-- Speech-active duration is summed from shared VAD speech segments and excludes leading, trailing, and internal non-speech regions.
-- Syllable-like energy nuclei are estimated from a smoothed frame-RMS envelope inside speech-active regions.
-- Synthetic pulse trains with known nucleus counts produce expected slow, normal, and fast labels.
-- A pause-separated synthetic clip is normalised by speech-active time, not total clip duration.
-- A leading/trailing-silence synthetic clip can consume regions from the shared VAD detector.
-- No-speech input yields no syllable estimate and an unknown pace label.
-- Invalid input, invalid VAD segments, bad frame settings, and invalid analysis thresholds raise clear errors.
+- Qualitative thresholds for loudness, VAD, pauses, pitch, and pace are centralised in `src/vocal_intel/config.py`.
+- Feature analysis outputs expose a `config_version` tied to the active threshold configuration.
+- Deterministic tests verify that threshold edits through configuration change labels without editing feature modules.
+- The calibration procedure is documented in `docs/THRESHOLD_CALIBRATION.md`.
+- Invalid threshold configuration values raise clear errors before analysis.
 - Test suite passes (`pytest`); the command-line shell runs (`python -m vocal_intel --version`, `--help`).
 - The staged-file check rejects private audio and local-only files.
 
 ## Known limitations
 
-- Syllable-rate label thresholds are provisional and documented; they are scheduled for data-driven, versioned calibration in a later phase.
-- The envelope-nucleus estimator is dependency-light and validated on deterministic synthetic pulse trains; real script-read validation against measured words per minute remains part of the manual real-audio protocol.
-- The method estimates syllable-like acoustic peaks, not lexical syllables or words; sustained vowels, clipped speech, background noise, or unusual articulation may produce missed or spurious nuclei.
-- Pace is analysed as an isolated feature; no conversation policy or unified schema output yet.
+- Threshold values remain provisional because private real-audio recordings are not tracked in the repository.
+- The documented calibration procedure is ready for real-sample measurements, but checked-in values still preserve deterministic synthetic baselines.
+- Feature analyses now stamp the threshold configuration version, but no unified schema output yet.
+- Pace is analysed as an isolated feature; no conversation policy yet.
 - Feature-extraction libraries (for example librosa, scipy, scikit-learn) are not installed yet; they are introduced in later phases.
 
 ## Next approval gate
 
-Merge of the Phase 9 pull request, then Phase 10 — Threshold calibration and versioned configuration.
+Merge of the Phase 10 pull request, then Phase 11 — Unified feature summary and versioned output schema.

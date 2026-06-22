@@ -7,8 +7,8 @@ silence, trailing silence, and internal pauses do not make speech sound slower.
 
 This phase intentionally stays dependency-light. The envelope-nucleus method is
 validated on deterministic synthetic pulse trains; real script-read validation
-is still required by the manual protocol. Thresholds are PROVISIONAL and are
-scheduled to move into the versioned configuration in a later phase.
+is still required by the manual protocol. Qualitative thresholds are sourced
+from the versioned threshold configuration and remain provisional.
 """
 
 from __future__ import annotations
@@ -19,17 +19,18 @@ from typing import Iterable
 
 import numpy as np
 
+from vocal_intel.config import DEFAULT_THRESHOLD_CONFIG, ThresholdConfig
 from vocal_intel.loudness import frame_rms
 from vocal_intel.vad import NON_SPEECH, SPEECH, Segment, VadResult
 
 DEFAULT_FRAME_MS = 40.0
 DEFAULT_HOP_MS = 10.0
 DEFAULT_SMOOTHING_FRAMES = 5
-DEFAULT_NUCLEUS_THRESHOLD_RATIO = 0.45
-DEFAULT_MIN_NUCLEUS_DISTANCE_SECONDS = 0.12
+DEFAULT_NUCLEUS_THRESHOLD_RATIO = DEFAULT_THRESHOLD_CONFIG.pace.nucleus_threshold_ratio
+DEFAULT_MIN_NUCLEUS_DISTANCE_SECONDS = DEFAULT_THRESHOLD_CONFIG.pace.min_nucleus_distance_seconds
 
-SLOW_SYLLABLE_RATE_MAX = 3.0
-FAST_SYLLABLE_RATE_MIN = 5.0
+SLOW_SYLLABLE_RATE_MAX = DEFAULT_THRESHOLD_CONFIG.pace.slow_syllable_rate_max
+FAST_SYLLABLE_RATE_MIN = DEFAULT_THRESHOLD_CONFIG.pace.fast_syllable_rate_min
 
 SLOW_PACE = "slow"
 NORMAL_PACE = "normal"
@@ -56,6 +57,7 @@ class PaceAnalysis:
     speech_frame_mask: np.ndarray
     syllable_peak_times: np.ndarray
     source_segment_count: int
+    config_version: str = DEFAULT_THRESHOLD_CONFIG.version
 
 
 def _as_mono(samples) -> np.ndarray:
@@ -105,16 +107,21 @@ def speech_active_duration_seconds(segments: Iterable[Segment]) -> float:
     return total
 
 
-def pace_label(syllable_rate_per_second: float | None) -> str:
+def pace_label(
+    syllable_rate_per_second: float | None,
+    *,
+    config: ThresholdConfig = DEFAULT_THRESHOLD_CONFIG,
+) -> str:
     """Map a syllable-rate estimate to a provisional slow / normal / fast label."""
     if syllable_rate_per_second is None:
         return UNKNOWN_PACE
     rate = float(syllable_rate_per_second)
     if not math.isfinite(rate) or rate < 0.0:
         raise PaceError("syllable_rate_per_second must be finite and non-negative")
-    if rate < SLOW_SYLLABLE_RATE_MAX:
+    thresholds = config.pace
+    if rate < thresholds.slow_syllable_rate_max:
         return SLOW_PACE
-    if rate <= FAST_SYLLABLE_RATE_MIN:
+    if rate <= thresholds.fast_syllable_rate_min:
         return NORMAL_PACE
     return FAST_PACE
 
@@ -197,8 +204,9 @@ def analyze_pace(
     frame_ms: float = DEFAULT_FRAME_MS,
     hop_ms: float = DEFAULT_HOP_MS,
     smoothing_frames: int = DEFAULT_SMOOTHING_FRAMES,
-    nucleus_threshold_ratio: float = DEFAULT_NUCLEUS_THRESHOLD_RATIO,
-    min_nucleus_distance_seconds: float = DEFAULT_MIN_NUCLEUS_DISTANCE_SECONDS,
+    nucleus_threshold_ratio: float | None = None,
+    min_nucleus_distance_seconds: float | None = None,
+    config: ThresholdConfig = DEFAULT_THRESHOLD_CONFIG,
 ) -> PaceAnalysis:
     """Estimate speech pace from mono audio and an existing VAD result."""
     arr = _as_mono(samples)
@@ -207,14 +215,19 @@ def analyze_pace(
         raise PaceError("vad_result.sample_rate must be positive")
     frame_duration = _positive_finite(frame_ms, "frame_ms")
     hop_duration = _positive_finite(hop_ms, "hop_ms")
+    thresholds = config.pace
     min_distance = _positive_finite(
-        min_nucleus_distance_seconds,
+        thresholds.min_nucleus_distance_seconds
+        if min_nucleus_distance_seconds is None
+        else min_nucleus_distance_seconds,
         "min_nucleus_distance_seconds",
     )
     smooth_width = int(smoothing_frames)
     if smooth_width <= 0:
         raise PaceError("smoothing_frames must be positive")
-    threshold_ratio = float(nucleus_threshold_ratio)
+    threshold_ratio = (
+        thresholds.nucleus_threshold_ratio if nucleus_threshold_ratio is None else float(nucleus_threshold_ratio)
+    )
     if not math.isfinite(threshold_ratio) or not 0.0 <= threshold_ratio <= 1.0:
         raise PaceError("nucleus_threshold_ratio must be within [0.0, 1.0]")
 
@@ -251,10 +264,11 @@ def analyze_pace(
         estimated_syllable_count=int(len(syllable_peaks)),
         syllable_rate_per_second=syllable_rate,
         syllables_per_minute=syllables_per_minute,
-        label=pace_label(syllable_rate),
+        label=pace_label(syllable_rate, config=config),
         frame_times=frame_times,
         envelope_rms=envelope,
         speech_frame_mask=speech_mask,
         syllable_peak_times=syllable_peaks,
         source_segment_count=len(segments),
+        config_version=config.version,
     )
