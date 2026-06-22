@@ -4,13 +4,13 @@ This document tracks the current state of the project: the active phase, the lat
 
 ## Current phase
 
-Phase 8 — Pitch analysis (implemented; pending review).
+Phase 9 — Speech pace estimation (implemented; pending review).
 
 ## Latest implementation commit
 
-`2d85552` — Merge pull request #8 from reachaki/phase-7-silence-pause-detection (merged to `main`).
+`0dd8f2e` — Merge pull request #9 from reachaki/phase-8-pitch-analysis (merged to `main`).
 
-Phase 8 pitch analysis is proposed in the open pull request from `phase-8-pitch-analysis`.
+Phase 9 speech pace estimation is proposed in the open pull request from `phase-9-speech-pace-estimation`.
 
 ## Latest review status
 
@@ -18,25 +18,24 @@ In review — pull request open into `main`.
 
 ## Validation performed
 
-- Pitch contour extraction uses frame-level autocorrelation with an explicit fundamental-frequency search range.
-- Unvoiced frames are represented explicitly with `NaN` frequencies and boolean voiced-frame flags.
-- A known synthetic tone is estimated within the documented frequency tolerance.
-- Synthetic silence yields no voiced frames and unknown pitch labels.
-- Synthetic rising and falling sweeps produce the expected trend labels.
-- Pitch stability is computed over voiced frames only and mapped to provisional flat/animated delivery labels.
-- Invalid input, invalid sample rates, bad search ranges, and invalid analysis thresholds raise clear errors.
+- Speech-active duration is summed from shared VAD speech segments and excludes leading, trailing, and internal non-speech regions.
+- Syllable-like energy nuclei are estimated from a smoothed frame-RMS envelope inside speech-active regions.
+- Synthetic pulse trains with known nucleus counts produce expected slow, normal, and fast labels.
+- A pause-separated synthetic clip is normalised by speech-active time, not total clip duration.
+- A leading/trailing-silence synthetic clip can consume regions from the shared VAD detector.
+- No-speech input yields no syllable estimate and an unknown pace label.
+- Invalid input, invalid VAD segments, bad frame settings, and invalid analysis thresholds raise clear errors.
 - Test suite passes (`pytest`); the command-line shell runs (`python -m vocal_intel --version`, `--help`).
 - The staged-file check rejects private audio and local-only files.
 
 ## Known limitations
 
-- Pitch search range and label thresholds are provisional and documented; they are scheduled for data-driven, versioned calibration in a later phase.
-- The autocorrelation estimator is dependency-light and validated on synthetic signals; real expressive-versus-monotone and question-versus-statement checks remain part of the manual real-audio protocol.
-- Simple autocorrelation can produce octave errors on difficult real speech; this is not ruled out by synthetic tone tests.
-- Unvoiced detection is energy- and clarity-threshold based, so noisy or breathy speech may produce missed or spurious voiced frames.
-- No pace analysis, conversation policy, or unified schema output yet.
+- Syllable-rate label thresholds are provisional and documented; they are scheduled for data-driven, versioned calibration in a later phase.
+- The envelope-nucleus estimator is dependency-light and validated on deterministic synthetic pulse trains; real script-read validation against measured words per minute remains part of the manual real-audio protocol.
+- The method estimates syllable-like acoustic peaks, not lexical syllables or words; sustained vowels, clipped speech, background noise, or unusual articulation may produce missed or spurious nuclei.
+- Pace is analysed as an isolated feature; no conversation policy or unified schema output yet.
 - Feature-extraction libraries (for example librosa, scipy, scikit-learn) are not installed yet; they are introduced in later phases.
 
 ## Next approval gate
 
-Merge of the Phase 8 pull request, then Phase 9 — Speech pace estimation.
+Merge of the Phase 9 pull request, then Phase 10 — Threshold calibration and versioned configuration.
