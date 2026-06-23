@@ -1,7 +1,8 @@
 """Command-line interface for Vocal Intelligence Lab.
 
-The CLI is built up phase by phase. It currently provides a ``version`` command
-and an ``inspect`` command that reports metadata for a local audio file.
+The CLI is built up phase by phase. It currently provides a ``version`` command,
+an ``inspect`` command that reports metadata for a local audio file, and a
+``summarize`` command that emits the unified versioned feature summary as JSON.
 """
 
 from __future__ import annotations
@@ -36,6 +37,15 @@ def build_parser() -> argparse.ArgumentParser:
         "path",
         help="Path to a local audio file (WAV is supported and validated).",
     )
+
+    summarize_parser = subparsers.add_parser(
+        "summarize",
+        help="Summarise a local audio file's vocal features as versioned JSON.",
+    )
+    summarize_parser.add_argument(
+        "path",
+        help="Path to a local audio file (WAV is supported and validated).",
+    )
     return parser
 
 
@@ -52,6 +62,28 @@ def _run_inspect(path: str) -> int:
     return 0
 
 
+def _run_summarize(path: str) -> int:
+    # Imported lazily so version/help do not require the audio stack.
+    from vocal_intel.ingest import AudioIngestionError
+    from vocal_intel import summary
+
+    try:
+        feature_summary = summary.summarize_file(path)
+    except AudioIngestionError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    print(
+        json.dumps(
+            feature_summary.to_dict(),
+            indent=2,
+            ensure_ascii=True,
+            sort_keys=False,
+            separators=(",", ": "),
+        )
+    )
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     """Run the CLI and return a process exit code."""
     parser = build_parser()
@@ -62,6 +94,8 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "inspect":
         return _run_inspect(args.path)
+    if args.command == "summarize":
+        return _run_summarize(args.path)
 
     # No subcommand given: show help as a friendly default.
     parser.print_help()

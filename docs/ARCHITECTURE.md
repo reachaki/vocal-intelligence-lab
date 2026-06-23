@@ -93,21 +93,39 @@ The system produces structured JSON that conforms to a single versioned schema. 
 
 The `conversation_recommendation` field is one of a fixed set of values: `wait`, `respond`, `clarify`, `interrupt_politely`, `challenge`.
 
-Example:
+Example (the `summarize` output; `conversation_recommendation` and the other
+reserved fields are populated in a later phase):
 
 {
   "schema_version": "1.0",
-  "config_version": "1.0",
+  "config_version": "phase-10-provisional-v1",
+  "source": { "path": "clip.wav", "sample_rate": 16000 },
   "duration_seconds": 8.4,
-  "speech_rate_estimate": "fast",
-  "volume_profile": "rising",
-  "pause_pattern": "thinking_pause_detected",
-  "pitch_profile": "animated",
-  "conversation_recommendation": "wait",
-  "reason": "Long pause detected after unfinished phrase; likely thinking.",
-  "confidence": "medium",
-  "limitations": "Single-speaker calibration; pace is a signal-level estimate."
+  "loudness": { "label": "loud", "rms_dbfs": -12.0412, "peak_dbfs": -6.0206 },
+  "pauses": {
+    "pause_count": 1,
+    "total_pause_seconds": 0.9,
+    "longest_pause_seconds": 0.9,
+    "short_count": 0,
+    "medium_count": 1,
+    "long_count": 0
+  },
+  "pitch": {
+    "delivery_label": "animated",
+    "trend_label": "rising",
+    "median_frequency_hz": 198.4,
+    "voiced_fraction": 0.62
+  },
+  "pace": { "label": "fast", "syllable_rate_per_second": 5.4, "speech_active_seconds": 6.1 },
+  "confidence": "not_estimated",
+  "limitations": "Single-speaker, signal-level estimates; thresholds provisional pending real-audio calibration; no transcript or conversation policy.",
+  "conversation_recommendation": null,
+  "reason": null,
+  "evidence": [],
+  "uncertainty": {}
 }
+
+The full field reference is in `docs/OUTPUT_SCHEMA.md`.
 
 ## Design constraints
 
