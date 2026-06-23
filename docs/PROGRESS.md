@@ -4,36 +4,38 @@ This document tracks the current state of the project: the active phase, the lat
 
 ## Current phase
 
-Phase 10 — Threshold calibration and versioned configuration (implemented; pending review).
+Phase 11 — Unified feature summary and versioned output schema (implemented; pending review).
 
 ## Latest implementation commit
 
-`bc4d768` — Merge pull request #10 from reachaki/phase-9-speech-pace-estimation (merged to `main`).
+`1c4fb54` — Add versioned threshold configuration (merged to `main` via the Phase 10 pull request).
 
-Phase 10 threshold configuration is proposed in the open pull request from `phase-10-threshold-config`.
+Phase 11 adds `src/vocal_intel/summary.py`, a `summarize` CLI subcommand, the
+`docs/OUTPUT_SCHEMA.md` reference, and the `tests/data/schema_manifest_v1.json`
+drift fixture on the `phase-11-unified-feature-summary` branch.
 
 ## Latest review status
 
-In review — pull request open into `main`.
+In review — pull request to be opened into `main`.
 
 ## Validation performed
 
-- Qualitative thresholds for loudness, VAD, pauses, pitch, and pace are centralised in `src/vocal_intel/config.py`.
-- Feature analysis outputs expose a `config_version` tied to the active threshold configuration.
-- Deterministic tests verify that threshold edits through configuration change labels without editing feature modules.
-- The calibration procedure is documented in `docs/THRESHOLD_CALIBRATION.md`.
-- Invalid threshold configuration values raise clear errors before analysis.
-- Test suite passes (`pytest`); the command-line shell runs (`python -m vocal_intel --version`, `--help`).
+- One config object is threaded through loudness, voice activity, pauses, pitch, and pace so the document's `config_version` matches every feature's stamped version.
+- The summary combines existing feature outputs only; it adds no new signal-processing math.
+- Output is deterministic: numpy scalars are coerced to native Python types, non-finite values become `null`, floats are rounded to six decimals, and serialisation uses fixed insertion-ordered settings.
+- A golden field-path manifest and an order-sensitive drift test guard the schema against accidental add, remove, rename, or reorder.
+- Reserved recommendation, reason, evidence, and uncertainty fields are emitted as fixed empty sentinels with no logic behind them.
+- The `summarize` command exits 0 with JSON on valid input and exits 1 with an `error:` message on a missing, empty, or corrupt file, reusing the existing ingestion errors.
+- `inspect` output is unchanged; test suite passes (`pytest`); the command-line shell runs (`python -m vocal_intel --version`, `--help`).
 - The staged-file check rejects private audio and local-only files.
 
 ## Known limitations
 
 - Threshold values remain provisional because private real-audio recordings are not tracked in the repository.
 - The documented calibration procedure is ready for real-sample measurements, but checked-in values still preserve deterministic synthetic baselines.
-- Feature analyses now stamp the threshold configuration version, but no unified schema output yet.
-- Pace is analysed as an isolated feature; no conversation policy yet.
+- A unified versioned summary schema is now emitted, but the conversation policy and recommendation fields are reserved and empty.
 - Feature-extraction libraries (for example librosa, scipy, scikit-learn) are not installed yet; they are introduced in later phases.
 
 ## Next approval gate
 
-Merge of the Phase 10 pull request, then Phase 11 — Unified feature summary and versioned output schema.
+Review and merge of the Phase 11 pull request, then Phase 12 — conversation policy and recommendation.
