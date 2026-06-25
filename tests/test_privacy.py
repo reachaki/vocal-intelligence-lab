@@ -28,6 +28,26 @@ def test_local_only_files_are_rejected():
     assert is_disallowed("models/baseline.pkl")
 
 
+def test_transcript_files_are_rejected():
+    for path in [
+        "call.vtt",
+        "sub/dir/meeting.SRT",
+        "captions.ass",
+    ]:
+        assert is_disallowed(path), path
+
+
+def test_transcript_and_meeting_directories_are_rejected():
+    for path in [
+        "transcripts/2026-06-25.txt",
+        "transcript/raw.md",
+        "meeting-notes/standup.md",
+        "docs/transcripts/call.md",
+        "notes/meeting-notes/sync.md",
+    ]:
+        assert is_disallowed(path), path
+
+
 def test_normal_source_files_are_allowed():
     for path in [
         "src/vocal_intel/__init__.py",
@@ -36,6 +56,19 @@ def test_normal_source_files_are_allowed():
         "docs/PROJECT_PLAN.md",
         "pyproject.toml",
         "scripts/check_staged_files.py",
+    ]:
+        assert not is_disallowed(path), path
+
+
+def test_legitimate_text_and_named_files_are_not_overblocked():
+    # The guard must stay narrow: general text files and source modules whose
+    # names merely contain "transcript" must not be blocked.
+    for path in [
+        "requirements.txt",
+        "docs/notes.txt",
+        "docs/transcription_overview.md",
+        "src/vocal_intel/transcript.py",
+        "tests/test_transcript_helpers.py",
     ]:
         assert not is_disallowed(path), path
 

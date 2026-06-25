@@ -4,9 +4,9 @@ This document tracks the current state of the project: the active phase, the val
 
 ## Current phase
 
-Phase 12b — Conversation recommendation output (in review).
+No phase is currently in review.
 
-Phase 11 (the unified feature summary and versioned output schema), the continuous-integration workflow, and Phase 12 (the deterministic policy core in `src/vocal_intel/policy.py`) are merged to `main`.
+Phase 11 (the unified feature summary and versioned output schema), the continuous-integration workflow, Phase 12 (the deterministic policy core in `src/vocal_intel/policy.py`), and Phase 12b (the opt-in `recommend` command) are merged to `main`.
 
 Phase 12b wires the policy core into a new, opt-in `recommend` command. The command emits a `schema_version` 1.1 document that carries the same feature blocks as the summary plus the policy's recommendation, reason, and evidence. The `summarize` command is unchanged and still emits its `schema_version` 1.0 document.
 
@@ -24,4 +24,4 @@ Phase 12b wires the policy core into a new, opt-in `recommend` command. The comm
 
 ## Next approval gate
 
-Review and merge of the Phase 12b recommendation-output change.
+None open. The next phase has not been selected.
