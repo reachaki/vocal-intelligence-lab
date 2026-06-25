@@ -19,7 +19,31 @@ The goal is to produce structured vocal context that can help a conversational s
 
 ## Current status
 
-Planning and project foundation.
+An installable command-line tool. It can inspect a local audio file, summarise its
+vocal features as versioned JSON, emit an opt-in conversation-timing recommendation,
+and report neutral structural metadata for a local text transcript. The feature and
+policy thresholds remain provisional, pending real-audio calibration.
+
+## Commands
+
+All commands read a single local file and print JSON to standard output. They run as
+`vocal-intel <command> <path>` (or `python -m vocal_intel <command> <path>`).
+
+- `inspect PATH` — Inspect a local audio file and print its metadata as JSON.
+- `summarize PATH` — Summarise a local audio file's vocal features as versioned JSON
+  (`schema_version` 1.0).
+- `recommend PATH` — Emit the opt-in conversation-timing recommendation document
+  (`schema_version` 1.1), pairing the feature summary with one provisional, rule-based
+  timing label.
+- `transcript-info PATH` — Report neutral structural metadata (character, word, and line
+  counts) for a local plain-text transcript (`.txt` or `.md`). The transcript text itself
+  is never included in the output, and this command does not affect the recommendation.
+
+```
+vocal-intel summarize audio.wav
+vocal-intel recommend audio.wav
+vocal-intel transcript-info transcript.txt
+```
 
 ## Documentation
 
