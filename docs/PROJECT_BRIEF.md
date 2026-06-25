@@ -24,8 +24,8 @@ The goal is to build a research/developer prototype that can:
    - wait
    - respond
    - ask a clarification
-   - interrupt politely
-   - challenge the user
+   - interrupt politely (reserved; not implemented)
+   - challenge the user (reserved; not implemented)
    - let the user think
 6. Produce a structured JSON output that another AI system could use.
 
@@ -72,10 +72,10 @@ A working local prototype where I can provide an audio file and receive output l
   "duration_seconds": 8.4,
   "speech_rate_estimate": "fast",
   "volume_profile": "rising",
-  "pause_pattern": "thinking_pause_detected",
+  "pause_pattern": "medium_pause",
   "pitch_profile": "animated",
   "conversation_recommendation": "wait",
-  "reason": "User paused briefly after unfinished phrase with low falling energy, likely thinking."
+  "reason": "A trailing silence of 0.6 s was measured within the medium pause band; under the provisional timing rules this maps to wait."
 }
 
-The `conversation_recommendation` field is one of a fixed set of values: `wait`, `respond`, `clarify`, `interrupt_politely`, `challenge`. All output conforms to a single versioned schema.
+The current implementation produces `wait`, `respond`, `clarify`, and `not_enough_evidence` for the `conversation_recommendation` field; `interrupt_politely` and `challenge` are reserved and not implemented. These recommendations and their reasons are strictly signal-level descriptions of measured audio features and make no inference about a speaker's emotions, intent, or state of mind. All output conforms to a single versioned schema.

@@ -1,41 +1,27 @@
 # Progress
 
-This document tracks the current state of the project: the active phase, the latest implementation commit, the most recent review, the validation performed, known limitations, and the next approval gate.
+This document tracks the current state of the project: the active phase, the validation performed, known limitations, and the next approval gate.
 
 ## Current phase
 
-Phase 11 — Unified feature summary and versioned output schema (implemented; pending review).
+Phase 12 — Conversation policy engine (policy core; in review).
 
-## Latest implementation commit
+Phase 11 (the unified feature summary and versioned output schema) and the continuous-integration workflow are merged to `main`.
 
-`1c4fb54` — Add versioned threshold configuration (merged to `main` via the Phase 10 pull request).
-
-Phase 11 adds `src/vocal_intel/summary.py`, a `summarize` CLI subcommand, the
-`docs/OUTPUT_SCHEMA.md` reference, and the `tests/data/schema_manifest_v1.json`
-drift fixture on the `phase-11-unified-feature-summary` branch.
-
-## Latest review status
-
-In review — pull request to be opened into `main`.
+Phase 12 adds `src/vocal_intel/policy.py`, a deterministic rule-based conversation-timing policy, with provisional thresholds in the versioned configuration and a reference document in `docs/CONVERSATION_POLICY.md`.
 
 ## Validation performed
 
-- One config object is threaded through loudness, voice activity, pauses, pitch, and pace so the document's `config_version` matches every feature's stamped version.
-- The summary combines existing feature outputs only; it adds no new signal-processing math.
-- Output is deterministic: numpy scalars are coerced to native Python types, non-finite values become `null`, floats are rounded to six decimals, and serialisation uses fixed insertion-ordered settings.
-- A golden field-path manifest and an order-sensitive drift test guard the schema against accidental add, remove, rename, or reorder.
-- Reserved recommendation, reason, evidence, and uncertainty fields are emitted as fixed empty sentinels with no logic behind them.
-- The `summarize` command exits 0 with JSON on valid input and exits 1 with an `error:` message on a missing, empty, or corrupt file, reusing the existing ingestion errors.
-- `inspect` output is unchanged; test suite passes (`pytest`); the command-line shell runs (`python -m vocal_intel --version`, `--help`).
-- The staged-file check rejects private audio and local-only files.
+- Deterministic unit tests assert each policy output (`wait`, `respond`, `clarify`, and the conservative `not_enough_evidence` default) for hand-authored feature inputs, including the gate edge cases and the band-boundary operators.
+- New unit tests cover validation of the conversation-policy thresholds in the versioned configuration.
+- The existing test suite still passes; there is no change to the summarize output or the output schema.
 
 ## Known limitations
 
-- Threshold values remain provisional because private real-audio recordings are not tracked in the repository.
-- The documented calibration procedure is ready for real-sample measurements, but checked-in values still preserve deterministic synthetic baselines.
-- A unified versioned summary schema is now emitted, but the conversation policy and recommendation fields are reserved and empty.
-- Feature-extraction libraries (for example librosa, scipy, scikit-learn) are not installed yet; they are introduced in later phases.
+- The policy thresholds and the whole-file pause-to-timing mapping are provisional, pending the real-audio validation run.
+- The policy core is not yet wired into the command-line output; that is a later step.
+- `interrupt_politely` and `challenge` are reserved and not implemented.
 
 ## Next approval gate
 
-Review and merge of the Phase 11 pull request, then Phase 12 — conversation policy and recommendation.
+Review and merge of the Phase 12 policy-core change.
