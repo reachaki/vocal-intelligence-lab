@@ -129,6 +129,26 @@ pause count 1, voiced fraction 0.50, pace label `normal`.
 - Gates pass, but `L = 0.3 < 0.5` and pause count `1 < 2`.
 - Recommendation: `not_enough_evidence`.
 
+## Command-line output
+
+The policy is surfaced through the opt-in `vocal-intel recommend PATH` command,
+which emits a `schema_version` 1.1 document. That document carries the same
+feature blocks as the `summarize` output plus the policy's
+`conversation_recommendation`, `reason`, and `evidence`. The `summarize` command
+is unchanged: it still emits the `schema_version` 1.0 document with the
+recommendation fields left as empty sentinels.
+
+The recommendation is a signal-level LABEL of a measured pause band, not advice
+and not a claim about the speaker. It is provisional and pending the real-audio
+validation run.
+
+```
+vocal-intel recommend clip.wav
+```
+
+See `docs/OUTPUT_SCHEMA.md` for the 1.1 document field reference and the rules
+for telling the 1.0 and 1.1 documents apart.
+
 ## Reserved values
 
 `interrupt_politely` and `challenge` are reserved for a future, separately

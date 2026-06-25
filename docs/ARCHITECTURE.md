@@ -78,20 +78,34 @@ Examples:
 
 Responsible for producing an action recommendation.
 
-Possible recommendations:
+Recommendations produced by the live policy:
 - wait
 - respond
 - clarify
-- interrupt_politely
-- challenge
+- not_enough_evidence (the conservative default)
 
-The policy must be explainable. Every recommendation should include a reason.
+`interrupt_politely` and `challenge` are reserved for a future, separately
+scoped iteration; they are never produced by the current policy.
+
+The policy must be explainable. Every recommendation includes a reason.
 
 ### Output schema
 
-The system produces structured JSON that conforms to a single versioned schema. Every output carries a `schema_version`, and a `config_version` that identifies the threshold configuration in use. All JSON-emitting components share the same schema definition so the contract cannot drift between them.
+The system produces structured JSON under a two-document contract. The
+`summarize` command emits `schema_version` 1.0 (features only; the recommendation
+fields are reserved empty sentinels). The opt-in `recommend` command emits
+`schema_version` 1.1 (the same feature blocks plus a populated conversation
+recommendation, and a `policy_config_version`). Both documents share the same
+feature-block sub-schemas — `source`, `loudness`, `pauses`, `pitch`, `pace` — and
+differ only in the top-level version and in whether the recommendation fields are
+populated. The two cannot drift apart because those feature blocks are produced
+by the same `summary` code and reused verbatim. Every output carries a
+`schema_version` and a `config_version` that identifies the threshold
+configuration in use.
 
-The `conversation_recommendation` field is one of a fixed set of values: `wait`, `respond`, `clarify`, `interrupt_politely`, `challenge`.
+In the 1.1 document the `conversation_recommendation` field is one of a fixed set
+of values: `wait`, `respond`, `clarify`, `not_enough_evidence`. The reserved
+actions `interrupt_politely` and `challenge` are never produced.
 
 Example (the `summarize` output; `conversation_recommendation` and the other
 reserved fields are populated in a later phase):
