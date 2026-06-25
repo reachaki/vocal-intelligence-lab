@@ -4,24 +4,25 @@ This document tracks the current state of the project: the active phase, the val
 
 ## Current phase
 
-No phase is currently in review.
+Phase 13a — Transcript metadata (in review).
 
 Phase 11 (the unified feature summary and versioned output schema), the continuous-integration workflow, Phase 12 (the deterministic policy core in `src/vocal_intel/policy.py`), and Phase 12b (the opt-in `recommend` command) are merged to `main`.
 
-Phase 12b wires the policy core into a new, opt-in `recommend` command. The command emits a `schema_version` 1.1 document that carries the same feature blocks as the summary plus the policy's recommendation, reason, and evidence. The `summarize` command is unchanged and still emits its `schema_version` 1.0 document.
+Phase 13a adds a new, opt-in `transcript-info` command that reads a user-supplied local plain-text file (`.txt` or `.md`, UTF-8) and emits a separate `transcript_metadata` document (`schema_version` 1.0) carrying neutral structural counts only: `character_count`, `word_count`, and `line_count`, plus the source path and format. The transcript text itself is never included in the output, no content analysis or inference is performed, and the document does not affect the conversation recommendation. The `summarize` (1.0) and `recommend` (1.1) documents are unchanged.
 
 ## Validation performed
 
-- New deterministic tests assert the 1.1 document shape and field order against a committed golden manifest, pin the exact reason and evidence wording for the classified recommendations, confirm the conservative `not_enough_evidence` default end-to-end through the command line, and assert that the feature blocks are byte-equal to the summary output.
-- A regression test confirms the `summarize` output stays byte-stable and that its reserved recommendation fields remain empty.
-- The existing test suite still passes; there is no change to the summarize output or to the 1.0 output schema.
+- New deterministic tests pin the `transcript_metadata` document shape and field order against a committed golden manifest, pin exact character, word, and line counts for fixed synthetic inputs (including a multibyte code point, a CRLF line ending, and whitespace-only text), and confirm error parity with the other commands (missing file, unsupported extension, non-UTF-8 content, and an oversize file).
+- Safety tests confirm the transcript text never leaks into the output, that the new module imports none of the audio, summary, recommendation, or policy code, and that the output carries no inference vocabulary or fields.
+- The existing test suite still passes; the `summarize` (1.0) and `recommend` (1.1) outputs are unchanged.
 
 ## Known limitations
 
+- The `transcript-info` command accepts only local plain-text `.txt`/`.md` files; structured caption and subtitle formats are out of scope.
+- The transcript counts are structural only; they make no linguistic or behavioural claim and do not influence any recommendation.
 - The policy thresholds and the whole-clip pause-to-timing mapping are provisional, pending the real-audio validation run.
-- The `uncertainty` and `confidence` fields remain reserved and are not estimated.
-- `interrupt_politely` and `challenge` are reserved and not produced.
+- The `uncertainty` and `confidence` fields remain reserved and are not estimated; `interrupt_politely` and `challenge` are reserved and not produced.
 
 ## Next approval gate
 
-None open. The next phase has not been selected.
+Review and merge of the Phase 13a transcript-metadata change.
