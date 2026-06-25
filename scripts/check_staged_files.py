@@ -2,8 +2,8 @@
 """Reject disallowed files from a commit.
 
 By default this inspects the staged file list (``git diff --cached
---name-only``) and exits non-zero if any private audio or local-only file is
-staged. Intended for use as a pre-commit hook:
+--name-only``) and exits non-zero if any private audio, transcript, or
+local-only file is staged. Intended for use as a pre-commit hook:
 
     python scripts/check_staged_files.py
 
@@ -46,7 +46,7 @@ def main(argv: list[str] | None = None) -> int:
         for path in disallowed:
             print(f"  - {path}", file=sys.stderr)
         print(
-            "Private audio and local-only files must not be committed.",
+            "Private audio, transcript, and local-only files must not be committed.",
             file=sys.stderr,
         )
         return 1
