@@ -108,7 +108,7 @@ Not allowed in version control:
 
 Enforcement:
 - repository ignore rules cover audio file types, the local recordings directory, generated data directories, and local-only working files
-- a staged-file check rejects audio files and local-only files before commit
+- a staged-file check rejects audio files, transcript and caption exports, transcript and meeting directories, and local-only files before commit
 - committed transcript examples must use synthetic placeholder text
 - local recordings are written to an ignored directory and excluded from cloud and system backups
 - a documented command removes all local recordings
