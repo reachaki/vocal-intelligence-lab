@@ -28,6 +28,8 @@ TRANSCRIPT_EXTENSIONS = (
     ".vtt",
     ".srt",
     ".ass",
+    ".sbv",
+    ".ttml",
 )
 
 # Path prefixes that must never be committed.
@@ -46,6 +48,7 @@ DISALLOWED_DIR_NAMES = (
     "transcripts",
     "transcript",
     "meeting-notes",
+    "meeting_notes",
 )
 
 
