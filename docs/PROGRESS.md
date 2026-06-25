@@ -4,11 +4,11 @@ This document tracks the current state of the project: the active phase, the val
 
 ## Current phase
 
-Phase 13a — Transcript metadata (in review).
+No phase is currently in review.
 
-Phase 11 (the unified feature summary and versioned output schema), the continuous-integration workflow, Phase 12 (the deterministic policy core in `src/vocal_intel/policy.py`), and Phase 12b (the opt-in `recommend` command) are merged to `main`.
+Phase 11 (the unified feature summary and versioned output schema), the continuous-integration workflow, Phase 12 (the deterministic policy core in `src/vocal_intel/policy.py`), Phase 12b (the opt-in `recommend` command), and Phase 13a (the opt-in `transcript-info` command) are merged to `main`.
 
-Phase 13a adds a new, opt-in `transcript-info` command that reads a user-supplied local plain-text file (`.txt` or `.md`, UTF-8) and emits a separate `transcript_metadata` document (`schema_version` 1.0) carrying neutral structural counts only: `character_count`, `word_count`, and `line_count`, plus the source path and format. The transcript text itself is never included in the output, no content analysis or inference is performed, and the document does not affect the conversation recommendation. The `summarize` (1.0) and `recommend` (1.1) documents are unchanged.
+Phase 13a added a new, opt-in `transcript-info` command that reads a user-supplied local plain-text file (`.txt` or `.md`, UTF-8) and emits a separate `transcript_metadata` document (`schema_version` 1.0) carrying neutral structural counts only: `character_count`, `word_count`, and `line_count`, plus the source path and format. The transcript text itself is never included in the output, no content analysis or inference is performed, and the document does not affect the conversation recommendation. The `summarize` (1.0) and `recommend` (1.1) documents are unchanged.
 
 ## Validation performed
 
@@ -25,4 +25,4 @@ Phase 13a adds a new, opt-in `transcript-info` command that reads a user-supplie
 
 ## Next approval gate
 
-Review and merge of the Phase 13a transcript-metadata change.
+None open. The next phase has not been selected.

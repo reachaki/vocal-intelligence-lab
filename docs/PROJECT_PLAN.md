@@ -283,6 +283,16 @@ Validation:
 
 Allow optional transcript text alongside audio features.
 
+Status: Phase 13a has shipped the first slice as metadata only. The opt-in
+`transcript-info` command reports neutral structural counts for a local text file,
+includes no transcript text in its output, performs no interpretation of the
+transcript, and does not affect the conversation recommendation.
+
+The remaining deliverables below that interpret transcript text — unfinished phrase
+detection, filler word detection, uncertainty indicators, and combined audio/text
+reasoning — are deferred. Each involves inference from transcript text and requires
+separate, explicit approval before any implementation.
+
 Deliverables:
 - optional transcript input supplied by file path or standard input
 - unfinished phrase detection
