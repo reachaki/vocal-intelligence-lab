@@ -258,10 +258,13 @@ Validation:
 
 Create a rule-based policy for conversation timing.
 
-Possible outputs:
+Outputs implemented in this phase:
 - wait
 - respond
 - clarify
+- not_enough_evidence (conservative default when signals are weak or ambiguous)
+
+Reserved for a future, separately scoped iteration (not implemented):
 - interrupt_politely
 - challenge
 
@@ -270,6 +273,7 @@ Deliverables:
 - documented rules
 - explainable reason field
 - thresholds sourced from the versioned configuration and marked provisional until the real-validation run
+- outputs are strictly signal-level, carry an explainable reason, and make no inference about the speaker
 
 Validation:
 - unit tests for each policy output

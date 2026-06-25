@@ -7,7 +7,11 @@ from dataclasses import replace
 import numpy as np
 
 from vocal_intel import synthetic
-from vocal_intel.config import DEFAULT_THRESHOLD_CONFIG, ThresholdConfigError
+from vocal_intel.config import (
+    ConversationPolicyThresholds,
+    DEFAULT_THRESHOLD_CONFIG,
+    ThresholdConfigError,
+)
 from vocal_intel.loudness import analyze_loudness, loudness_label, rms
 from vocal_intel.pace import FAST_PACE, NORMAL_PACE, analyze_pace, pace_label
 from vocal_intel.pauses import LONG_PAUSE, MEDIUM_PAUSE, analyze_pauses, pause_label
@@ -116,3 +120,49 @@ def test_invalid_threshold_config_values_raise_clear_errors():
         replace(DEFAULT_THRESHOLD_CONFIG, loudness=replace(DEFAULT_THRESHOLD_CONFIG.loudness, loud_dbfs_min=-30.0))
     with np.testing.assert_raises(ThresholdConfigError):
         replace(DEFAULT_THRESHOLD_CONFIG, pace=replace(DEFAULT_THRESHOLD_CONFIG.pace, fast_syllable_rate_min=2.0))
+
+
+def test_config_version_is_unchanged_by_policy_thresholds():
+    # The Phase 12 policy version lives only on the sub-object; the top-level
+    # config version must remain the Phase 10 value.
+    assert DEFAULT_THRESHOLD_CONFIG.version == "phase-10-provisional-v1"
+
+
+def test_conversation_policy_defaults_instantiate():
+    thresholds = ConversationPolicyThresholds()
+    assert thresholds.version == "phase-12-policy-provisional-v1"
+    assert thresholds.min_clip_seconds == 0.60
+    assert thresholds.min_voiced_fraction == 0.30
+    assert thresholds.wait_pause_min_seconds == 0.50
+    assert thresholds.respond_pause_min_seconds == 1.00
+    assert thresholds.min_pause_count_for_clarify == 2
+
+
+def test_default_config_includes_conversation_policy_sub_object():
+    policy_thresholds = DEFAULT_THRESHOLD_CONFIG.conversation_policy
+    assert isinstance(policy_thresholds, ConversationPolicyThresholds)
+    assert policy_thresholds.version == "phase-12-policy-provisional-v1"
+
+
+def test_invalid_conversation_policy_values_raise_clear_errors():
+    with np.testing.assert_raises(ThresholdConfigError):
+        ConversationPolicyThresholds(min_clip_seconds=0.0)
+    with np.testing.assert_raises(ThresholdConfigError):
+        ConversationPolicyThresholds(min_clip_seconds=-1.0)
+    with np.testing.assert_raises(ThresholdConfigError):
+        ConversationPolicyThresholds(min_voiced_fraction=1.5)
+    with np.testing.assert_raises(ThresholdConfigError):
+        ConversationPolicyThresholds(min_voiced_fraction=-0.1)
+    with np.testing.assert_raises(ThresholdConfigError):
+        # wait must be strictly less than respond.
+        ConversationPolicyThresholds(
+            wait_pause_min_seconds=1.0, respond_pause_min_seconds=1.0
+        )
+    with np.testing.assert_raises(ThresholdConfigError):
+        ConversationPolicyThresholds(
+            wait_pause_min_seconds=1.2, respond_pause_min_seconds=1.0
+        )
+    with np.testing.assert_raises(ThresholdConfigError):
+        ConversationPolicyThresholds(min_pause_count_for_clarify=0)
+    with np.testing.assert_raises(ThresholdConfigError):
+        ConversationPolicyThresholds(version="   ")

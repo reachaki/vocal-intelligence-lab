@@ -125,6 +125,47 @@ class PaceThresholds:
 
 
 @dataclass(frozen=True)
+class ConversationPolicyThresholds:
+    # All cut-points below are PROVISIONAL pending the Phase 16 real-audio run;
+    # they preserve a conservative, signal-level default mapping only.
+    version: str = "phase-12-policy-provisional-v1"
+    min_clip_seconds: float = 0.60
+    min_voiced_fraction: float = 0.30
+    wait_pause_min_seconds: float = 0.50
+    respond_pause_min_seconds: float = 1.00
+    min_pause_count_for_clarify: int = 2
+
+    def __post_init__(self) -> None:
+        if not self.version.strip():
+            raise ThresholdConfigError("conversation_policy.version must not be empty")
+        _positive(self.min_clip_seconds, "conversation_policy.min_clip_seconds")
+        voiced = _finite(self.min_voiced_fraction, "conversation_policy.min_voiced_fraction")
+        if not 0.0 <= voiced <= 1.0:
+            raise ThresholdConfigError(
+                "conversation_policy.min_voiced_fraction must be within [0.0, 1.0]"
+            )
+        wait_min = _positive(self.wait_pause_min_seconds, "conversation_policy.wait_pause_min_seconds")
+        respond_min = _positive(
+            self.respond_pause_min_seconds, "conversation_policy.respond_pause_min_seconds"
+        )
+        if not wait_min < respond_min:
+            raise ThresholdConfigError(
+                "conversation_policy.wait_pause_min_seconds must be less than "
+                "conversation_policy.respond_pause_min_seconds"
+            )
+        if not isinstance(self.min_pause_count_for_clarify, int) or isinstance(
+            self.min_pause_count_for_clarify, bool
+        ):
+            raise ThresholdConfigError(
+                "conversation_policy.min_pause_count_for_clarify must be an int"
+            )
+        if self.min_pause_count_for_clarify < 1:
+            raise ThresholdConfigError(
+                "conversation_policy.min_pause_count_for_clarify must be at least 1"
+            )
+
+
+@dataclass(frozen=True)
 class ThresholdConfig:
     version: str = CONFIG_VERSION
     loudness: LoudnessThresholds = LoudnessThresholds()
@@ -132,6 +173,7 @@ class ThresholdConfig:
     pauses: PauseThresholds = PauseThresholds()
     pitch: PitchThresholds = PitchThresholds()
     pace: PaceThresholds = PaceThresholds()
+    conversation_policy: ConversationPolicyThresholds = ConversationPolicyThresholds()
 
     def __post_init__(self) -> None:
         if not self.version.strip():
@@ -143,6 +185,7 @@ DEFAULT_THRESHOLD_CONFIG = ThresholdConfig()
 
 __all__ = [
     "CONFIG_VERSION",
+    "ConversationPolicyThresholds",
     "DEFAULT_THRESHOLD_CONFIG",
     "LoudnessThresholds",
     "PaceThresholds",
