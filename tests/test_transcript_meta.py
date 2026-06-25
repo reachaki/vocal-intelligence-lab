@@ -15,6 +15,7 @@ directory, so the suite commits no transcript files.
 
 from __future__ import annotations
 
+import ast
 import json
 from pathlib import Path
 
@@ -177,6 +178,37 @@ def test_module_is_isolated_from_audio_and_policy_code():
         "import numpy",
     ):
         assert forbidden not in source, forbidden
+
+
+def test_module_imports_are_a_closed_stdlib_allowlist():
+    # Stronger than the substring tripwire above: parse the import graph and
+    # require every imported module to be on a closed standard-library allowlist,
+    # and forbid dynamic-import escape hatches. This makes it structurally
+    # impossible for the transcript-metadata code to reach the audio, summary,
+    # recommendation, or policy code (so it can never influence a conversation
+    # recommendation), even via a dynamic import a substring scan would miss.
+    #
+    # An intended new standard-library import must be added to ``allowed`` in the
+    # same change; a third-party or in-package import must never appear here.
+    source = Path(transcript_meta.__file__).read_text(encoding="utf-8")
+    tree = ast.parse(source)
+
+    imported_roots: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                imported_roots.add(alias.name.split(".")[0])
+        elif isinstance(node, ast.ImportFrom):
+            # A relative import (level > 0) would pull in sibling package modules.
+            assert node.level == 0, "transcript_meta must not use relative imports"
+            imported_roots.add((node.module or "").split(".")[0])
+
+    allowed = {"__future__", "json", "dataclasses", "pathlib"}
+    assert imported_roots <= allowed, sorted(imported_roots - allowed)
+
+    # No dynamic-import escape hatches that a static import scan cannot see.
+    assert "importlib" not in source
+    assert "__import__" not in source
 
 
 _INFERENCE_WORDS = [
