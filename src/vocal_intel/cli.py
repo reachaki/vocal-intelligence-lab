@@ -1,8 +1,10 @@
 """Command-line interface for Vocal Intelligence Lab.
 
 The CLI is built up phase by phase. It currently provides a ``version`` command,
-an ``inspect`` command that reports metadata for a local audio file, and a
-``summarize`` command that emits the unified versioned feature summary as JSON.
+an ``inspect`` command that reports metadata for a local audio file, a
+``summarize`` command that emits the unified versioned feature summary as JSON,
+and a ``recommend`` command that emits the opt-in conversation-recommendation
+document as JSON.
 """
 
 from __future__ import annotations
@@ -46,6 +48,15 @@ def build_parser() -> argparse.ArgumentParser:
         "path",
         help="Path to a local audio file (WAV is supported and validated).",
     )
+
+    recommend_parser = subparsers.add_parser(
+        "recommend",
+        help="Recommend a conversation-timing action for a local audio file as versioned JSON.",
+    )
+    recommend_parser.add_argument(
+        "path",
+        help="Path to a local audio file (WAV is supported and validated).",
+    )
     return parser
 
 
@@ -84,6 +95,22 @@ def _run_summarize(path: str) -> int:
     return 0
 
 
+def _run_recommend(path: str) -> int:
+    # Imported lazily so version/help do not require the audio stack.
+    from vocal_intel.ingest import AudioIngestionError
+    from vocal_intel import recommend
+
+    # Assemble the full document before printing anything, so a post-ingest
+    # failure cannot leave a partial document on stdout.
+    try:
+        document = recommend.recommend_file(path)
+    except AudioIngestionError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    print(recommend.to_json(document))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     """Run the CLI and return a process exit code."""
     parser = build_parser()
@@ -96,6 +123,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run_inspect(args.path)
     if args.command == "summarize":
         return _run_summarize(args.path)
+    if args.command == "recommend":
+        return _run_recommend(args.path)
 
     # No subcommand given: show help as a friendly default.
     parser.print_help()
