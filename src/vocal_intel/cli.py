@@ -3,8 +3,9 @@
 The CLI is built up phase by phase. It currently provides a ``version`` command,
 an ``inspect`` command that reports metadata for a local audio file, a
 ``summarize`` command that emits the unified versioned feature summary as JSON,
-and a ``recommend`` command that emits the opt-in conversation-recommendation
-document as JSON.
+a ``recommend`` command that emits the opt-in conversation-recommendation
+document as JSON, and a ``transcript-info`` command that reports neutral
+structural metadata for a local text transcript as JSON.
 """
 
 from __future__ import annotations
@@ -56,6 +57,15 @@ def build_parser() -> argparse.ArgumentParser:
     recommend_parser.add_argument(
         "path",
         help="Path to a local audio file (WAV is supported and validated).",
+    )
+
+    transcript_parser = subparsers.add_parser(
+        "transcript-info",
+        help="Report neutral structural metadata for a local text transcript as JSON.",
+    )
+    transcript_parser.add_argument(
+        "path",
+        help="Path to a local plain-text transcript file (.txt or .md, UTF-8).",
     )
     return parser
 
@@ -111,6 +121,19 @@ def _run_recommend(path: str) -> int:
     return 0
 
 
+def _run_transcript_info(path: str) -> int:
+    # Imported lazily so version/help do not require the transcript module.
+    from vocal_intel import transcript_meta
+
+    try:
+        metadata = transcript_meta.metadata_from_file(path)
+    except transcript_meta.TranscriptMetaError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+    print(metadata.to_json())
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     """Run the CLI and return a process exit code."""
     parser = build_parser()
@@ -125,6 +148,8 @@ def main(argv: list[str] | None = None) -> int:
         return _run_summarize(args.path)
     if args.command == "recommend":
         return _run_recommend(args.path)
+    if args.command == "transcript-info":
+        return _run_transcript_info(args.path)
 
     # No subcommand given: show help as a friendly default.
     parser.print_help()

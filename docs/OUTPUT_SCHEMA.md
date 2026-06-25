@@ -175,7 +175,10 @@ The fixed `limitations` sentence for v1.1 is:
 
 ## Telling the two documents apart
 
-`schema_version` is the SOLE discriminator between the two documents.
+Within the audio feature-summary family — the `summarize` (`"1.0"`) and `recommend`
+(`"1.1"`) documents — `schema_version` is the sole discriminator between the two.
+(The separate transcript-metadata document is not part of this family and is
+identified by its `document_type` field; see below.)
 
 - `"1.0"` (from `summarize`): `conversation_recommendation` and `reason` are
   `null`, `evidence` is `[]`, `uncertainty` is `{}`, and there is **no**
@@ -199,3 +202,54 @@ The v1.1 field set and order are frozen by a golden manifest
 (`tests/data/schema_manifest_recommend_v1_1.json`) and an order-sensitive drift
 test, the same way v1.0 is. Any intended change requires bumping
 `RECOMMEND_SCHEMA_VERSION` and regenerating that manifest in the same change.
+
+# Transcript metadata document (transcript-info)
+
+This is a separate, opt-in document, emitted by `vocal-intel transcript-info PATH`
+and by `vocal_intel.transcript_meta.metadata_from_file` / `metadata_from_text`. It
+is **not** part of the audio feature-summary family above: it describes a local
+text file, not audio, and it neither carries nor influences any conversation
+recommendation.
+
+The document reports neutral structural counts only. It never includes the
+transcript text itself, performs no content analysis, and makes no inference.
+
+It is identified by a `document_type` field (the audio documents do not carry one)
+and a `schema_version` of `"1.0"`. Its eight ordered field-paths are frozen by
+`tests/data/schema_manifest_transcript_1_0.json`.
+
+## Top-level fields (transcript-info)
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `document_type` | string | Always `"transcript_metadata"` for this document. |
+| `schema_version` | string | Always `"1.0"` for this document. |
+| `source` | object | Input descriptor (see below). |
+| `character_count` | integer | Number of Unicode code points in the decoded text. |
+| `word_count` | integer | Number of whitespace-separated tokens (`str.split()`); a structural token count, not a linguistic one. |
+| `line_count` | integer | Number of lines (`str.splitlines()`). |
+| `limitations` | string | Fixed neutral caveat sentence. |
+
+### `source` (transcript-info)
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `path` | string or null | The input path for `metadata_from_file`; `null` for `metadata_from_text`. |
+| `format` | string or null | The lower-cased file extension without its dot (`"txt"` or `"md"`). |
+
+## Input and limits
+
+Only local plain-text files with a `.txt` or `.md` extension are accepted, decoded
+as strict UTF-8. A path that is missing, is not a regular file, has another
+extension, exceeds the size cap, or is not valid UTF-8 produces a non-zero exit with
+an `error:` message on standard error and no output on standard output. Counts are
+taken over the raw decoded text with no newline normalisation, so a `\r\n` line
+ending contributes one extra code point to `character_count` compared with `\n`.
+
+## Schema stability (transcript-info)
+
+The field set and order are frozen by a golden manifest
+(`tests/data/schema_manifest_transcript_1_0.json`) and an order-sensitive drift
+test, the same way the audio documents are. Any intended change requires bumping
+the transcript-metadata `SCHEMA_VERSION` and regenerating that manifest in the same
+change.
