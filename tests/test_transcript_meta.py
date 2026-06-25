@@ -363,3 +363,29 @@ def test_privacy_guard_still_protects_transcript_artefacts():
     assert is_disallowed("meeting-notes/standup.md")
     # A plain text file is still allowed (the guard stays narrow).
     assert not is_disallowed("notes.txt")
+
+
+# --- 8. full-document byte-exact golden ------------------------------------
+
+# Synthetic placeholder transcript text; the source-of-truth input for the
+# byte-exact golden document below. A fixed relative path keeps the golden
+# portable across machines (an absolute path would not be).
+GOLDEN_DOC_INPUT = (
+    "Speaker A: Hello, thanks for joining.\n"
+    "Speaker B: Glad to be here.\n"
+    "Speaker A: Let's begin.\n"
+)
+GOLDEN_DOC_PATH = (
+    Path(__file__).resolve().parent / "data" / "transcript_metadata_golden.json"
+)
+
+
+def test_transcript_metadata_matches_byte_exact_golden():
+    # Stronger than the field-path manifest: this pins the whole serialized
+    # document byte-for-byte — key order, value formatting, the limitations
+    # string, and the serializer settings — in one human-readable fixture. An
+    # intended change to the document requires regenerating this golden in the
+    # same change.
+    doc = metadata_from_text(GOLDEN_DOC_INPUT, path="transcript.txt", fmt="txt")
+    expected = GOLDEN_DOC_PATH.read_text(encoding="utf-8")
+    assert doc.to_json() == expected

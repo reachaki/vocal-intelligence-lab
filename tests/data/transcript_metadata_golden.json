@@ -1,0 +1,12 @@
+{
+  "document_type": "transcript_metadata",
+  "schema_version": "1.0",
+  "source": {
+    "path": "transcript.txt",
+    "format": "txt"
+  },
+  "character_count": 90,
+  "word_count": 16,
+  "line_count": 3,
+  "limitations": "Neutral structural counts of a user-supplied local text file. No content analysis and no inference are performed, and the transcript text is not included in this output."
+}
