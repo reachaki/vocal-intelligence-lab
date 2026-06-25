@@ -21,6 +21,11 @@ Audio file + transcript
 → combined interpretation
 → conversation recommendation
 
+As shipped, transcript support is metadata only: the `transcript-info` command
+reports neutral structural counts for a local text file and does not feed the
+conversation recommendation. The combined-interpretation path above is a future
+direction that would require separate, explicit approval.
+
 ## Main components
 
 ### Audio ingestion
