@@ -2,7 +2,14 @@
 
 from __future__ import annotations
 
-from vocal_intel.privacy import find_disallowed, is_disallowed
+from vocal_intel.privacy import (
+    AUDIO_EXTENSIONS,
+    DISALLOWED_DIR_NAMES,
+    DISALLOWED_PREFIXES,
+    TRANSCRIPT_EXTENSIONS,
+    find_disallowed,
+    is_disallowed,
+)
 
 
 def test_audio_files_are_rejected():
@@ -99,3 +106,42 @@ def test_legitimate_text_and_named_files_are_not_overblocked():
 def test_find_disallowed_filters_the_list():
     paths = ["src/vocal_intel/cli.py", "secret.wav", ".local/x.md"]
     assert find_disallowed(paths) == ["secret.wav", ".local/x.md"]
+
+
+# --- self-coverage: every declared rule is actually enforced ---------------
+#
+# These meta-tests iterate the guard's own declared tuples, so any future entry
+# is automatically covered: adding an extension or directory name that is not
+# actually enforced (or removing the enforcement while leaving the declaration)
+# will fail here. The non-empty guards keep the loops from passing vacuously.
+
+
+def test_declared_tuples_are_non_empty():
+    assert AUDIO_EXTENSIONS
+    assert TRANSCRIPT_EXTENSIONS
+    assert DISALLOWED_PREFIXES
+    assert DISALLOWED_DIR_NAMES
+
+
+def test_every_declared_audio_extension_is_enforced():
+    for ext in AUDIO_EXTENSIONS:
+        assert is_disallowed("clip" + ext), ext
+        assert is_disallowed("a/b/clip" + ext.upper()), ext  # case-insensitive
+
+
+def test_every_declared_transcript_extension_is_enforced():
+    for ext in TRANSCRIPT_EXTENSIONS:
+        assert is_disallowed("export" + ext), ext
+        assert is_disallowed("a/b/export" + ext.upper()), ext  # case-insensitive
+
+
+def test_every_declared_disallowed_dir_name_is_enforced():
+    for name in DISALLOWED_DIR_NAMES:
+        assert is_disallowed(name + "/file.md"), name
+        assert is_disallowed("nested/" + name + "/file.md"), name
+
+
+def test_every_declared_disallowed_prefix_is_enforced():
+    for prefix in DISALLOWED_PREFIXES:
+        assert is_disallowed(prefix + "x"), prefix
+        assert is_disallowed(prefix.rstrip("/")), prefix  # the bare directory name
